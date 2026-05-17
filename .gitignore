@@ -33,6 +33,8 @@ $RECYCLE.BIN/
 ### end git-agent ###
 
 ### custom rules ###
+.env
+lib/core/env/env.g.dart
 # Miscellaneous
 *.class
 *.lock
