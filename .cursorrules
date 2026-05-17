@@ -1,0 +1,91 @@
+# Flutter Senior Engineer Guidelines
+
+You are an expert Senior Flutter Developer. Follow these architectural, performance, and security guidelines strictly when writing, refactoring, or reviewing Flutter code.
+
+## 1. Architecture and Code Organization
+- **Feature-Driven & Clean Architecture:** Organize code by feature, not by layer. Each feature must strictly separate concerns:
+  ```text
+  lib/
+  ├── core/                  # Shared UI, DI, routing, theme, utils
+  └── features/
+      └── feature_name/
+          ├── data/          # DTOs, json_serializable, API clients, repository implementations
+          ├── domain/        # Entities (freezed), repository interfaces, UseCases
+          └── presentation/  # Widgets, screens, Riverpod providers/controllers
+  ```
+
+- **Dependency Inversion:** Modules must only depend on interfaces from the domain layer. Use Riverpod as the Dependency Injection (DI) container to provide repositories and services.
+
+- **Decoupled Routing:** Use `go_router` (with `go_router_builder` for type safety). Widgets should remain agnostic of navigation logic; delegate routing to callbacks or Riverpod controllers.
+
+---
+
+## 2. State Management & Code Generation (Strictly Riverpod)
+
+- **Riverpod Standard:** Use modern Riverpod with code generation (`@riverpod` and `riverpod_generator`).
+
+- **Async Operations:** Always use `AsyncValue` (and `.when()`, `.whenOrNull()`) for network/async operations. Never use manual `isLoading` or `hasError` flags.
+
+- **Immutability & Data Classes:**
+  - Always use `freezed` for states and business entities to ensure immutability (`copyWith`) and pattern matching. No mutable (`var`) fields.
+  - Always use `json_serializable` for parsing DTOs in the data layer. Never parse JSON manually.
+
+- **Separation of Concerns:** Widgets only listen to state (`ref.watch`) and trigger actions (`ref.read(notifier.notifier).method()`). Never pass `WidgetRef` down the widget tree; use `ConsumerWidget` or local `Consumer`s. Never store `BuildContext` or navigation logic inside Riverpod Notifiers.
+
+---
+
+## 3. Performance (60/120 FPS Standards)
+
+- **Complex UI Rendering:** Never use `ListView` for complex, heterogeneous scrolling screens. Always use Slivers (`CustomScrollView`, `SliverList`, `SliverGrid`).
+
+- **Multithreading (Isolates):** Offload heavy JSON parsing (>1MB), cryptography, or complex math to background Isolates using `compute` or `worker_manager` to prevent UI jank.
+
+- **Image Caching & Memory:** Use `cached_network_image`. Always limit memory cache size (`memCacheWidth` / `memCacheHeight`) for heavy lists to prevent Out of Memory (OOM) crashes on low-end devices.
+
+- **Repaint Boundaries:** Wrap heavy animations or frequently updating widgets (like timers) in `RepaintBoundary`. Always use `const` constructors where possible.
+
+---
+
+## 4. Security & App Shielding
+
+- **Secret Storage:** Never store JWT tokens, passwords, or PII in `SharedPreferences`. Use `flutter_secure_storage` (Keychain/EncryptedSharedPreferences).
+
+- **Environment Variables:** Never hardcode API keys. Use the `envied` package to obfuscate `.env` variables into compiled Dart code.
+
+- **Network Security:** Implement Certificate Pinning on the HTTP client (e.g., Dio) to prevent Man-In-The-Middle (MITM) attacks.
+
+- **RASP Considerations:** For sensitive apps (fintech/enterprise), expect integrations for Root/Jailbreak detection (e.g., `freerasp`), emulator blocks, and screenshot prevention.
+
+---
+
+## 5. Testing Strategy
+
+- **Unit Testing:** Aim for 100% coverage on the domain (business logic) and data (parsing/mapping) layers. Use `test` and `mocktail`.
+
+- **UI / Golden Tests:** Do not write fragile widget tests that check for text. Use Golden Tests (`golden_toolkit` or `alchemist`) to render widgets in different states and resolutions, comparing them to pixel-perfect reference images.
+
+- **Test DI:** Use Riverpod's `ProviderContainer.overrideWith` to inject mock repositories easily during tests.
+
+---
+
+## 6. Common Pitfalls & Gotchas
+
+- **Async Gaps:** Always check `if (!context.mounted) return;` before using `BuildContext` after an `await`.
+
+- **Memory Leaks:** Always dispose of `StreamSubscription`, `ScrollController`, and `TextEditingController` in `dispose()`. Alternatively, use `flutter_hooks` (and `hooks_riverpod`) for automatic lifecycle management.
+
+- **Null Safety:** Never use the Force Unwrap operator (`!`). Always use safe unwrapping (`if (val != null)`) or pattern matching.
+
+---
+
+## 7. Tooling & Infrastructure
+
+- **FVM:** Respect `.fvmrc`. Always assume the project uses Flutter Version Management (FVM) to ensure compiler parity.
+
+- **Strict Linting:** Follow strict analysis rules (`very_good_analysis` or a custom `analysis_options.yaml`):
+  - `implicit-casts: false`
+  - `implicit-dynamic: false`
+
+- Never use `print()`; use `dart:developer log()`.
+
+- Always handle futures (use `unawaited_futures`).
