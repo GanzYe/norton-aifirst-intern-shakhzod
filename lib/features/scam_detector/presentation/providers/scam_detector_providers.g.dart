@@ -6,27 +6,27 @@ part of 'scam_detector_providers.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$anthropicRemoteDataSourceHash() =>
-    r'67180ff8510001c269b04c5fa700dff6694acfbf';
+String _$geminiRemoteDataSourceHash() =>
+    r'8dc819553ebf982f9b73f8f143ddf11ea9223584';
 
-/// See also [anthropicRemoteDataSource].
-@ProviderFor(anthropicRemoteDataSource)
-final anthropicRemoteDataSourceProvider =
-    Provider<AnthropicRemoteDataSource>.internal(
-      anthropicRemoteDataSource,
-      name: r'anthropicRemoteDataSourceProvider',
+/// See also [geminiRemoteDataSource].
+@ProviderFor(geminiRemoteDataSource)
+final geminiRemoteDataSourceProvider =
+    Provider<GeminiRemoteDataSource>.internal(
+      geminiRemoteDataSource,
+      name: r'geminiRemoteDataSourceProvider',
       debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
           ? null
-          : _$anthropicRemoteDataSourceHash,
+          : _$geminiRemoteDataSourceHash,
       dependencies: null,
       allTransitiveDependencies: null,
     );
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef AnthropicRemoteDataSourceRef = ProviderRef<AnthropicRemoteDataSource>;
+typedef GeminiRemoteDataSourceRef = ProviderRef<GeminiRemoteDataSource>;
 String _$scamAnalysisRepositoryHash() =>
-    r'd1692131d7e375223ff02a80a58fa3f3eabfef7c';
+    r'ae7a4535f664e69e75f13df816072cd29412baf4';
 
 /// See also [scamAnalysisRepository].
 @ProviderFor(scamAnalysisRepository)

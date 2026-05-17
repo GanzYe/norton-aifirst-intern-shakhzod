@@ -1,6 +1,6 @@
 # Scam Message Detector
 
-Flutter app that analyzes suspicious SMS, email snippets, or URLs using the Anthropic Claude API (`claude-sonnet-4-20250514`).
+Flutter app that analyzes suspicious SMS, email snippets, or URLs using the Google Gemini API (`gemini-3.1-pro-preview`).
 
 ## Setup
 
@@ -11,7 +11,7 @@ Flutter app that analyzes suspicious SMS, email snippets, or URLs using the Anth
    cp .env.example .env
    ```
 
-   Set `ANTHROPIC_API_KEY` in `.env` to your [Anthropic API key](https://console.anthropic.com/).
+   Set `GEMINI_API_KEY` in `.env` to your [Google AI Studio API key](https://aistudio.google.com/apikey).
 
 3. Install dependencies and generate code:
 

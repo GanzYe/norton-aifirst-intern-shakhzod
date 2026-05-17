@@ -91,4 +91,4 @@ You are an expert Senior Flutter Developer. Follow these architectural, performa
 - Always handle futures (use `unawaited_futures`).
 
 ## 8. UI Constants & Design Tokens
-- Rule: All visual settings are located exclusively in `core/theme/`. No values or colors should be hardcoded directly within the widget.
+- All visual settings are located exclusively in `core/theme/`. No values, sizes or colors should be hardcoded directly within the widget.

@@ -7,7 +7,7 @@ part of 'scam_analysis_controller.dart';
 // **************************************************************************
 
 String _$scamAnalysisControllerHash() =>
-    r'a26e649180c65554f7351a5bac36ff00dc4909b2';
+    r'658de3cc3f28bdcac39fc7732efec885df21350d';
 
 /// See also [ScamAnalysisController].
 @ProviderFor(ScamAnalysisController)
