@@ -22,7 +22,8 @@ abstract final class AppColors {
 
   static Color get hintMuted => textMuted.withValues(alpha: opacityHint);
 
-  static Color get borderMuted => textMuted.withValues(alpha: opacityBorderMuted);
+  static Color get borderMuted =>
+      textMuted.withValues(alpha: opacityBorderMuted);
 
   static Color get iconMuted => textMuted.withValues(alpha: opacityIconMuted);
 

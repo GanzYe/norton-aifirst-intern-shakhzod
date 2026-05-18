@@ -40,9 +40,7 @@ abstract final class AppDecorations {
     );
   }
 
-  static BoxDecoration riskBadge({
-    required Color color,
-  }) {
+  static BoxDecoration riskBadge({required Color color}) {
     return BoxDecoration(
       color: color.withValues(alpha: AppColors.opacityRiskFill),
       borderRadius: AppRadius.pillAll,
