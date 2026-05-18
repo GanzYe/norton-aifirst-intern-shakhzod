@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:scam_message_detector/core/theme/app_decorations.dart';
@@ -9,6 +10,7 @@ import 'package:scam_message_detector/features/scam_detector/domain/entities/sca
 import 'package:scam_message_detector/features/scam_detector/presentation/constants/example_messages.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/providers/scam_analysis_controller.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/analyze_button.dart';
+import 'package:scam_message_detector/features/scam_detector/presentation/widgets/incognito_mode_switch.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/example_message_tile.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/result_card.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/smd_logo.dart';
@@ -23,6 +25,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen>
     with SingleTickerProviderStateMixin {
   final _messageController = TextEditingController();
+  String? _attachedEmlRaw;
   late final AnimationController _resultAnimController;
   late final Animation<double> _fadeAnimation;
   late final Animation<Offset> _slideAnimation;
@@ -58,13 +61,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Future<void> _onAnalyze() async {
     FocusScope.of(context).unfocus();
     _resultAnimController.reset();
-    await ref
-        .read(scamAnalysisControllerProvider.notifier)
-        .analyze(_messageController.text);
+    await ref.read(scamAnalysisControllerProvider.notifier).analyze(
+          message: _messageController.text,
+          emlRawContent: _attachedEmlRaw,
+        );
+  }
+
+  Future<void> _onPickEml() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['eml'],
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) {
+      return;
+    }
+    final file = result.files.single;
+    final bytes = file.bytes;
+    if (bytes == null) {
+      return;
+    }
+    final raw = String.fromCharCodes(bytes);
+    setState(() {
+      _attachedEmlRaw = raw;
+      _messageController.text = 'Attached EML: ${file.name}';
+    });
+    ref.read(scamAnalysisControllerProvider.notifier).reset();
+    _resultAnimController.reset();
+    setState(() => _lastShownAnalysis = null);
+  }
+
+  void _clearEmlAttachment() {
+    setState(() => _attachedEmlRaw = null);
   }
 
   void _onExampleTap(String body) {
     _messageController.text = body;
+    _attachedEmlRaw = null;
     ref.read(scamAnalysisControllerProvider.notifier).reset();
     _resultAnimController.reset();
     setState(() => _lastShownAnalysis = null);
@@ -131,6 +164,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             'Enter a URL, message, email,'
                             ' or snippet to check for scams.',
                       ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    IncognitoModeSwitch(enabled: !isLoading),
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: isLoading ? null : _onPickEml,
+                          icon: const Icon(Icons.attach_email_outlined),
+                          label: const Text('Upload .eml'),
+                        ),
+                        if (_attachedEmlRaw != null) ...[
+                          const SizedBox(width: AppSpacing.sm),
+                          TextButton(
+                            onPressed: isLoading ? null : _clearEmlAttachment,
+                            child: const Text('Clear EML'),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: AppSpacing.md),
                     AnalyzeButton(isLoading: isLoading, onPressed: _onAnalyze),
