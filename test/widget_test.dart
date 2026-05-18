@@ -6,18 +6,11 @@ import 'package:scam_message_detector/features/scam_detector/presentation/screen
 void main() {
   testWidgets('Home screen shows analyze UI', (tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
-          home: HomeScreen(),
-        ),
-      ),
+      const ProviderScope(child: MaterialApp(home: HomeScreen())),
     );
 
     expect(find.text('Analyze'), findsOneWidget);
     expect(find.text('Try an example'), findsOneWidget);
-    expect(
-      find.textContaining('Paste a suspicious SMS'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('Paste a suspicious SMS'), findsOneWidget);
   });
 }
