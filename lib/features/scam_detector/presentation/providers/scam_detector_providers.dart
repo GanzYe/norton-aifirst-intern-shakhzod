@@ -1,6 +1,8 @@
+import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:scam_message_detector/core/network/dio_provider.dart';
+import 'package:scam_message_detector/core/env/env.dart';
 import 'package:scam_message_detector/features/scam_detector/data/datasources/gemini_remote_datasource.dart';
+import 'package:scam_message_detector/features/scam_detector/data/datasources/gemini_scam_analysis_config.dart';
 import 'package:scam_message_detector/features/scam_detector/data/repositories/scam_analysis_repository_impl.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/scam_analysis_repository.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/usecases/analyze_message_usecase.dart';
@@ -8,8 +10,21 @@ import 'package:scam_message_detector/features/scam_detector/domain/usecases/ana
 part 'scam_detector_providers.g.dart';
 
 @Riverpod(keepAlive: true)
+GenerativeModel scamAnalysisGenerativeModel(
+  ScamAnalysisGenerativeModelRef ref,
+) {
+  final apiKey = Env.geminiApiKey;
+  if (apiKey.isEmpty || apiKey == 'your_gemini_api_key_here') {
+    throw const GeminiDataSourceException(
+      'Missing API key. Copy .env.example to .env and set GEMINI_API_KEY.',
+    );
+  }
+  return createScamAnalysisGenerativeModel(apiKey);
+}
+
+@Riverpod(keepAlive: true)
 GeminiRemoteDataSource geminiRemoteDataSource(GeminiRemoteDataSourceRef ref) {
-  return GeminiRemoteDataSource(ref.watch(dioProvider));
+  return GeminiRemoteDataSource(ref.watch(scamAnalysisGenerativeModelProvider));
 }
 
 @Riverpod(keepAlive: true)

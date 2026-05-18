@@ -6,8 +6,26 @@ part of 'scam_detector_providers.dart';
 // RiverpodGenerator
 // **************************************************************************
 
+String _$scamAnalysisGenerativeModelHash() =>
+    r'e725afd19308f2d6f1d4c45c8dda9654cc90d426';
+
+/// See also [scamAnalysisGenerativeModel].
+@ProviderFor(scamAnalysisGenerativeModel)
+final scamAnalysisGenerativeModelProvider = Provider<GenerativeModel>.internal(
+  scamAnalysisGenerativeModel,
+  name: r'scamAnalysisGenerativeModelProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$scamAnalysisGenerativeModelHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef ScamAnalysisGenerativeModelRef = ProviderRef<GenerativeModel>;
 String _$geminiRemoteDataSourceHash() =>
-    r'8dc819553ebf982f9b73f8f143ddf11ea9223584';
+    r'eed852ac23de18517e40c575989f42a0b2bce44d';
 
 /// See also [geminiRemoteDataSource].
 @ProviderFor(geminiRemoteDataSource)
