@@ -11,10 +11,7 @@ class SmdLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size(size, size),
-      painter: _SmdShieldPainter(),
-    );
+    return CustomPaint(size: Size(size, size), painter: _SmdShieldPainter());
   }
 }
 
@@ -58,10 +55,7 @@ class _SmdShieldPainter extends CustomPainter {
 
     textPainter.paint(
       canvas,
-      Offset(
-        (w - textPainter.width) / 2,
-        h * 0.38 - textPainter.height / 2,
-      ),
+      Offset((w - textPainter.width) / 2, h * 0.38 - textPainter.height / 2),
     );
   }
 

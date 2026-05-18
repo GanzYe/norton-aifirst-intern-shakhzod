@@ -7,16 +7,16 @@ enum RiskLevel {
   dangerous;
 
   String get label => switch (this) {
-        RiskLevel.safe => 'SAFE',
-        RiskLevel.suspicious => 'SUSPICIOUS',
-        RiskLevel.dangerous => 'DANGEROUS',
-      };
+    RiskLevel.safe => 'SAFE',
+    RiskLevel.suspicious => 'SUSPICIOUS',
+    RiskLevel.dangerous => 'DANGEROUS',
+  };
 
   Color get color => switch (this) {
-        RiskLevel.safe => AppColors.safeGreen,
-        RiskLevel.suspicious => AppColors.suspiciousOrange,
-        RiskLevel.dangerous => AppColors.dangerousRed,
-      };
+    RiskLevel.safe => AppColors.safeGreen,
+    RiskLevel.suspicious => AppColors.suspiciousOrange,
+    RiskLevel.dangerous => AppColors.dangerousRed,
+  };
 
   static RiskLevel fromString(String value) {
     return switch (value.toUpperCase().trim()) {

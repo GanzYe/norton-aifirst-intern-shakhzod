@@ -24,8 +24,8 @@ class ConfidenceBar extends StatelessWidget {
         Text(
           'Confidence: $confidence%',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: AppTextStyles.confidenceLabel.fontWeight,
-              ),
+            fontWeight: AppTextStyles.confidenceLabel.fontWeight,
+          ),
         ),
         const SizedBox(height: AppSpacing.xs),
         ClipRRect(
@@ -33,8 +33,9 @@ class ConfidenceBar extends StatelessWidget {
           child: LinearProgressIndicator(
             value: confidence / 100,
             minHeight: AppSizes.confidenceBarHeight,
-            backgroundColor:
-                riskLevel.color.withValues(alpha: AppColors.opacityRiskTrack),
+            backgroundColor: riskLevel.color.withValues(
+              alpha: AppColors.opacityRiskTrack,
+            ),
             color: riskLevel.color,
           ),
         ),

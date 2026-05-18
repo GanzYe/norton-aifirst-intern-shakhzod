@@ -36,12 +36,7 @@ class ExampleMessageTile extends StatelessWidget {
                 color: AppColors.iconMuted,
               ),
               const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  title,
-                  style: AppTextStyles.exampleTile,
-                ),
-              ),
+              Expanded(child: Text(title, style: AppTextStyles.exampleTile)),
             ],
           ),
         ),

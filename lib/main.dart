@@ -4,9 +4,5 @@ import 'package:scam_message_detector/app.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(
-    const ProviderScope(
-      child: ScamMessageDetectorApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: ScamMessageDetectorApp()));
 }

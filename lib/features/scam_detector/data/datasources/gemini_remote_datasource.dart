@@ -19,9 +19,7 @@ class GeminiRemoteDataSource {
 
       final text = response.text;
       if (text == null || text.trim().isEmpty) {
-        throw const GeminiDataSourceException(
-          'Empty response from AI model.',
-        );
+        throw const GeminiDataSourceException('Empty response from AI model.');
       }
 
       final decoded = jsonDecode(text);

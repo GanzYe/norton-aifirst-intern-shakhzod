@@ -39,12 +39,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       parent: _resultAnimController,
       curve: Curves.easeOut,
     );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.08),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _resultAnimController, curve: Curves.easeOutCubic),
-    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _resultAnimController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
   }
 
   @override
@@ -86,9 +87,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       if (previous?.isLoading == true && next.hasError && mounted) {
         final error = next.error;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error?.toString() ?? 'Analysis failed.'),
-          ),
+          SnackBar(content: Text(error?.toString() ?? 'Analysis failed.')),
         );
       }
     });
@@ -129,14 +128,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       minLines: 5,
                       decoration: AppDecorations.inputField(
                         hintText:
-                            'Enter a URL, message, email, or snippet to check for scams.',
+                            'Enter a URL, message, email,'
+                            ' or snippet to check for scams.',
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    AnalyzeButton(
-                      isLoading: isLoading,
-                      onPressed: _onAnalyze,
-                    ),
+                    AnalyzeButton(isLoading: isLoading, onPressed: _onAnalyze),
                     const SizedBox(height: AppSpacing.xl),
                     const Text(
                       'Try an example',
@@ -170,9 +167,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ),
               )
             else
-              const SliverToBoxAdapter(
-                child: SizedBox(height: AppSpacing.xxl),
-              ),
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
           ],
         ),
       ),

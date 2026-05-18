@@ -33,26 +33,24 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _titleScale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 25),
       TweenSequenceItem(
-        tween: Tween(begin: 1.0, end: 1.0),
-        weight: 25,
-      ),
-      TweenSequenceItem(
-        tween: Tween(begin: 1.0, end: 0.55)
-            .chain(CurveTween(curve: Curves.easeInOutCubic)),
+        tween: Tween(
+          begin: 1.0,
+          end: 0.55,
+        ).chain(CurveTween(curve: Curves.easeInOutCubic)),
         weight: 40,
       ),
-      TweenSequenceItem(
-        tween: ConstantTween(0.0),
-        weight: 35,
-      ),
+      TweenSequenceItem(tween: ConstantTween(0.0), weight: 35),
     ]).animate(_controller);
 
     _titleOpacity = TweenSequence<double>([
       TweenSequenceItem(tween: ConstantTween(1.0), weight: 30),
       TweenSequenceItem(
-        tween: Tween(begin: 1.0, end: 0.0)
-            .chain(CurveTween(curve: Curves.easeOut)),
+        tween: Tween(
+          begin: 1.0,
+          end: 0.0,
+        ).chain(CurveTween(curve: Curves.easeOut)),
         weight: 35,
       ),
       TweenSequenceItem(tween: ConstantTween(0.0), weight: 35),
@@ -61,8 +59,10 @@ class _SplashScreenState extends State<SplashScreen>
     _abbrevOpacity = TweenSequence<double>([
       TweenSequenceItem(tween: ConstantTween(0.0), weight: 38),
       TweenSequenceItem(
-        tween: Tween(begin: 0.0, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeIn)),
+        tween: Tween(
+          begin: 0.0,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeIn)),
         weight: 22,
       ),
       TweenSequenceItem(tween: ConstantTween(1.0), weight: 40),
@@ -71,8 +71,10 @@ class _SplashScreenState extends State<SplashScreen>
     _abbrevScale = TweenSequence<double>([
       TweenSequenceItem(tween: ConstantTween(0.7), weight: 38),
       TweenSequenceItem(
-        tween: Tween(begin: 0.7, end: 1.0)
-            .chain(CurveTween(curve: Curves.elasticOut)),
+        tween: Tween(
+          begin: 0.7,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.elasticOut)),
         weight: 30,
       ),
       TweenSequenceItem(tween: ConstantTween(1.0), weight: 32),
@@ -81,8 +83,10 @@ class _SplashScreenState extends State<SplashScreen>
     _subtitleOpacity = TweenSequence<double>([
       TweenSequenceItem(tween: ConstantTween(0.0), weight: 48),
       TweenSequenceItem(
-        tween: Tween(begin: 0.0, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeIn)),
+        tween: Tween(
+          begin: 0.0,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeIn)),
         weight: 20,
       ),
       TweenSequenceItem(tween: ConstantTween(1.0), weight: 32),
@@ -195,10 +199,7 @@ class _SplashTitleLayer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Opacity(
       opacity: opacity.value,
-      child: Transform.scale(
-        scale: scale.value,
-        child: child,
-      ),
+      child: Transform.scale(scale: scale.value, child: child),
     );
   }
 }
