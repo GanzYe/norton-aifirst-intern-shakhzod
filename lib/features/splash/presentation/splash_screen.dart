@@ -2,7 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:scam_message_detector/core/theme/app_colors.dart';
+import 'package:scam_message_detector/core/theme/app_durations.dart';
+import 'package:scam_message_detector/core/theme/app_sizes.dart';
+import 'package:scam_message_detector/core/theme/app_spacing.dart';
+import 'package:scam_message_detector/core/theme/app_text_styles.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -26,7 +29,7 @@ class _SplashScreenState extends State<SplashScreen>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2800),
+      duration: AppDurations.splash,
     );
 
     _titleScale = TweenSequence<double>([
@@ -94,7 +97,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     unawaited(_controller.forward());
     unawaited(
-      Future<void>.delayed(const Duration(milliseconds: 3200), () {
+      Future<void>.delayed(AppDurations.splashNavigate, () {
         if (!mounted) return;
         context.go('/home');
       }),
@@ -110,7 +113,6 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Stack(
           children: [
@@ -122,39 +124,25 @@ class _SplashScreenState extends State<SplashScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       SizedBox(
-                        height: 120,
+                        height: AppSizes.splashTitleArea,
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
-                            Opacity(
-                              opacity: _titleOpacity.value,
-                              child: Transform.scale(
-                                scale: _titleScale.value,
-                                child: const Text(
-                                  'Scam Message Detector',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.nortonYellow,
-                                    height: 1.2,
-                                  ),
-                                ),
+                            _SplashTitleLayer(
+                              opacity: _titleOpacity,
+                              scale: _titleScale,
+                              child: const Text(
+                                'Scam Message Detector',
+                                textAlign: TextAlign.center,
+                                style: AppTextStyles.splashTitle,
                               ),
                             ),
-                            Opacity(
-                              opacity: _abbrevOpacity.value,
-                              child: Transform.scale(
-                                scale: _abbrevScale.value,
-                                child: const Text(
-                                  'SMD.',
-                                  style: TextStyle(
-                                    fontSize: 56,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.nortonYellow,
-                                    letterSpacing: 2,
-                                  ),
-                                ),
+                            _SplashTitleLayer(
+                              opacity: _abbrevOpacity,
+                              scale: _abbrevScale,
+                              child: const Text(
+                                'SMD.',
+                                style: AppTextStyles.splashAbbrev,
                               ),
                             ),
                           ],
@@ -164,11 +152,7 @@ class _SplashScreenState extends State<SplashScreen>
                         opacity: _subtitleOpacity.value,
                         child: const Text(
                           'norton intern',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: AppColors.textMuted,
-                            letterSpacing: 1.2,
-                          ),
+                          style: AppTextStyles.splashSubtitle,
                         ),
                       ),
                     ],
@@ -179,22 +163,41 @@ class _SplashScreenState extends State<SplashScreen>
             Positioned(
               left: 0,
               right: 0,
-              bottom: 32,
+              bottom: AppSpacing.splashFooterBottom,
               child: FadeTransition(
                 opacity: _footerOpacity,
                 child: const Text(
                   'by Shakhzod',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textMuted,
-                    fontStyle: FontStyle.italic,
-                  ),
+                  style: AppTextStyles.splashFooter,
                 ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SplashTitleLayer extends StatelessWidget {
+  const _SplashTitleLayer({
+    required this.opacity,
+    required this.scale,
+    required this.child,
+  });
+
+  final Animation<double> opacity;
+  final Animation<double> scale;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: opacity.value,
+      child: Transform.scale(
+        scale: scale.value,
+        child: child,
       ),
     );
   }

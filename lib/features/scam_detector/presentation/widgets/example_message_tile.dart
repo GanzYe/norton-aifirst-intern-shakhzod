@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:scam_message_detector/core/theme/app_colors.dart';
+import 'package:scam_message_detector/core/theme/app_decorations.dart';
+import 'package:scam_message_detector/core/theme/app_radius.dart';
+import 'package:scam_message_detector/core/theme/app_sizes.dart';
+import 'package:scam_message_detector/core/theme/app_spacing.dart';
+import 'package:scam_message_detector/core/theme/app_text_styles.dart';
 
 class ExampleMessageTile extends StatelessWidget {
   const ExampleMessageTile({
@@ -14,32 +19,27 @@ class ExampleMessageTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.transparent,
+      color: AppColors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: AppRadius.smAll,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppColors.textMuted.withValues(alpha: 0.4)),
+          padding: AppSpacing.exampleTile,
+          decoration: AppDecorations.exampleTile(
+            borderColor: AppColors.borderMuted,
           ),
           child: Row(
             children: [
               Icon(
                 Icons.touch_app_outlined,
-                size: 18,
-                color: AppColors.textMuted.withValues(alpha: 0.8),
+                size: AppSizes.iconExample,
+                color: AppColors.iconMuted,
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textMuted,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: AppTextStyles.exampleTile,
                 ),
               ),
             ],

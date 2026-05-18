@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:scam_message_detector/core/theme/app_decorations.dart';
+import 'package:scam_message_detector/core/theme/app_spacing.dart';
+import 'package:scam_message_detector/core/theme/app_text_styles.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/risk_level.dart';
 
 class RiskBadge extends StatelessWidget {
@@ -9,20 +12,11 @@ class RiskBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: riskLevel.color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: riskLevel.color, width: 1.5),
-      ),
+      padding: AppSpacing.riskBadge,
+      decoration: AppDecorations.riskBadge(color: riskLevel.color),
       child: Text(
         riskLevel.label,
-        style: TextStyle(
-          color: riskLevel.color,
-          fontWeight: FontWeight.bold,
-          fontSize: 14,
-          letterSpacing: 0.8,
-        ),
+        style: AppTextStyles.riskBadge.copyWith(color: riskLevel.color),
       ),
     );
   }

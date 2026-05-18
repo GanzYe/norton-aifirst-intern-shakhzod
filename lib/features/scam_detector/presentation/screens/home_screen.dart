@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:scam_message_detector/core/theme/app_colors.dart';
+import 'package:scam_message_detector/core/theme/app_decorations.dart';
+import 'package:scam_message_detector/core/theme/app_durations.dart';
+import 'package:scam_message_detector/core/theme/app_sizes.dart';
+import 'package:scam_message_detector/core/theme/app_spacing.dart';
+import 'package:scam_message_detector/core/theme/app_text_styles.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/scam_analysis.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/constants/example_messages.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/providers/scam_analysis_controller.dart';
@@ -29,7 +33,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     super.initState();
     _resultAnimController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: AppDurations.resultAnimation,
     );
     _fadeAnimation = CurvedAnimation(
       parent: _resultAnimController,
@@ -84,7 +88,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(error?.toString() ?? 'Analysis failed.'),
-            backgroundColor: AppColors.dangerousRed,
           ),
         );
       }
@@ -93,17 +96,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final analysis = analysisState.valueOrNull;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const SmdLogo(size: 32),
+        title: const SmdLogo(size: AppSizes.logoAppBar),
         centerTitle: false,
-        backgroundColor: AppColors.background,
       ),
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+              padding: AppSpacing.screenContent,
               sliver: SliverToBoxAdapter(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -111,78 +112,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     Text(
                       'Scam Message Detector',
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.xs),
                     const Text(
                       'Paste a suspicious SMS, email, or URL below. '
                       'Our AI will assess the scam risk instantly.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textMuted,
-                        height: 1.4,
-                      ),
+                      style: AppTextStyles.homeSubtitle,
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: AppSpacing.xl),
                     TextFormField(
                       controller: _messageController,
                       enabled: !isLoading,
                       maxLines: null,
                       minLines: 5,
-                      decoration: InputDecoration(
+                      decoration: AppDecorations.inputField(
                         hintText:
                             'Enter a URL, message, email, or snippet to check for scams.',
-                        hintStyle: TextStyle(
-                          color: AppColors.textMuted.withValues(alpha: 0.7),
-                          fontSize: 14,
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.all(16),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: AppColors.borderBlack,
-                            width: 1.5,
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: AppColors.borderBlack,
-                            width: 1.5,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: AppColors.borderBlack,
-                            width: 2,
-                          ),
-                        ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.md),
                     AnalyzeButton(
                       isLoading: isLoading,
                       onPressed: _onAnalyze,
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: AppSpacing.xl),
                     const Text(
                       'Try an example',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textMuted,
-                      ),
+                      style: AppTextStyles.sectionLabel,
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: AppSpacing.sm),
                     ...ExampleMessages.samples.map(
                       (sample) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
+                        padding: AppSpacing.exampleItemBottom,
                         child: ExampleMessageTile(
                           title: sample.title,
                           onTap: () => _onExampleTap(sample.body),
@@ -195,7 +158,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
             if (analysis != null)
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                padding: AppSpacing.resultSection,
                 sliver: SliverToBoxAdapter(
                   child: FadeTransition(
                     opacity: _fadeAnimation,
@@ -207,7 +170,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ),
               )
             else
-              const SliverToBoxAdapter(child: SizedBox(height: 32)),
+              const SliverToBoxAdapter(
+                child: SizedBox(height: AppSpacing.xxl),
+              ),
           ],
         ),
       ),

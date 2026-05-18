@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:scam_message_detector/core/theme/app_colors.dart';
+import 'package:scam_message_detector/core/theme/app_sizes.dart';
+import 'package:scam_message_detector/core/theme/app_text_styles.dart';
 
 /// Small SMD shield letter-mark for the app bar.
 class SmdLogo extends StatelessWidget {
-  const SmdLogo({super.key, this.size = 36});
+  const SmdLogo({super.key, this.size = AppSizes.logoDefault});
 
   final double size;
 
@@ -41,17 +43,14 @@ class _SmdShieldPainter extends CustomPainter {
       Paint()
         ..color = AppColors.borderBlack
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
+        ..strokeWidth = AppSizes.logoStroke,
     );
 
     final textPainter = TextPainter(
       text: TextSpan(
         text: 'SMD',
-        style: TextStyle(
-          color: AppColors.textPrimary,
-          fontSize: w * 0.26,
-          fontWeight: FontWeight.w900,
-          height: 1,
+        style: AppTextStyles.logoMark.copyWith(
+          fontSize: w * AppSizes.logoTextScale,
         ),
       ),
       textDirection: TextDirection.ltr,
