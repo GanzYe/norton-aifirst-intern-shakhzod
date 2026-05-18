@@ -18,6 +18,10 @@ dependencies:
   json_annotation: ^4.9.0
   riverpod_annotation: ^2.6.1
   google_generative_ai: ^0.4.7
+  enough_mail: ^2.1.6
+  file_picker: ^8.1.7
+  flutter_llama: ^1.1.2
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:
@@ -29,6 +33,8 @@ dev_dependencies:
   json_serializable: ^6.9.5
   riverpod_generator: ^2.6.5
   very_good_analysis: ^7.0.0
+  http_mock_adapter: ^0.6.1
+  mockito: ^5.4.5
 
 flutter:
   uses-material-design: true
