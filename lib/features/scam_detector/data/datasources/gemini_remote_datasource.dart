@@ -9,13 +9,20 @@ class GeminiRemoteDataSource {
 
   final GenerativeModel _model;
 
-  Future<ScamAnalysisDto> analyzeMessage(String message) async {
-    try {
-      final response = await _model.generateContent([
+  Future<ScamAnalysisDto> analyzeMessage(String message) =>
+      _generateAnalysis(
         Content.text(
           'Analyze this message for scam/phishing risk:\n\n$message',
         ),
-      ]);
+      );
+
+  /// Accepts a fully-built SOAR master prompt (OSINT + scrubbed input).
+  Future<ScamAnalysisDto> analyzeAugmentedContent(String masterPrompt) =>
+      _generateAnalysis(Content.text(masterPrompt));
+
+  Future<ScamAnalysisDto> _generateAnalysis(Content content) async {
+    try {
+      final response = await _model.generateContent([content]);
 
       final text = response.text;
       if (text == null || text.trim().isEmpty) {

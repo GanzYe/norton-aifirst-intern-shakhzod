@@ -18,4 +18,16 @@ class ScamAnalysisRepositoryImpl implements ScamAnalysisRepository {
       throw GeminiDataSourceException(e.toString());
     }
   }
+
+  @override
+  Future<ScamAnalysis> analyzeAugmentedPrompt(String masterPrompt) async {
+    try {
+      final dto = await _remoteDataSource.analyzeAugmentedContent(masterPrompt);
+      return dto.toEntity();
+    } on GeminiDataSourceException {
+      rethrow;
+    } catch (e) {
+      throw GeminiDataSourceException(e.toString());
+    }
+  }
 }
