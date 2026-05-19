@@ -1,11 +1,12 @@
+import 'dart:developer' as developer;
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:scam_message_detector/features/scam_detector/data/datasources/gemini_remote_datasource.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/scam_analysis.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/soar_analysis_input.dart';
-import 'package:scam_message_detector/features/scam_detector/domain/usecases/analyze_message_usecase.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/utils/input_classifier.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/providers/incognito_mode_provider.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/providers/soar_providers.dart';
+import 'package:scam_message_detector/features/scam_detector/presentation/utils/friendly_error.dart';
 
 part 'scam_analysis_controller.g.dart';
 
@@ -35,10 +36,17 @@ class ScamAnalysisController extends _$ScamAnalysisController {
                 emlRawContent: emlRawContent,
               ),
             );
-      } on AnalyzeMessageException catch (e) {
-        throw AnalysisFailedException(e.message);
-      } on GeminiDataSourceException catch (e) {
-        throw AnalysisFailedException(e.message);
+      } on Object catch (error, stack) {
+        // Always normalize whatever the pipeline threw into a clean,
+        // user-facing message. No PlatformException / Dio / API quota
+        // strings ever reach the UI.
+        developer.log(
+          'Analyze failed',
+          name: 'ScamAnalysisController',
+          error: error,
+          stackTrace: stack,
+        );
+        throw AnalysisFailedException(friendlyAnalysisError(error));
       }
     });
   }
