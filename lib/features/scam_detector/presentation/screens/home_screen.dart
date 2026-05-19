@@ -12,6 +12,8 @@ import 'package:scam_message_detector/features/scam_detector/presentation/provid
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/analyze_button.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/incognito_mode_switch.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/example_message_tile.dart';
+import 'package:scam_message_detector/features/scam_detector/presentation/widgets/local_analysis_warning_banner.dart';
+import 'package:scam_message_detector/features/scam_detector/presentation/widgets/local_model_unavailable_message.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/result_card.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/smd_logo.dart';
 
@@ -93,6 +95,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   void _clearEmlAttachment() {
     setState(() => _attachedEmlRaw = null);
+  }
+
+  Widget _buildAnalysisResult(ScamAnalysis analysis) {
+    if (analysis.localModelUnavailable) {
+      return const LocalModelUnavailableMessage();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (analysis.resolvedLocally) ...[
+          const LocalAnalysisWarningBanner(),
+          const SizedBox(height: AppSpacing.md),
+        ],
+        ResultCard(analysis: analysis),
+      ],
+    );
   }
 
   void _onExampleTap(String body) {
@@ -213,7 +232,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     opacity: _fadeAnimation,
                     child: SlideTransition(
                       position: _slideAnimation,
-                      child: ResultCard(analysis: analysis),
+                      child: _buildAnalysisResult(analysis),
                     ),
                   ),
                 ),
