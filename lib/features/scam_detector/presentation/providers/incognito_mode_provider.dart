@@ -12,15 +12,6 @@ ModelDownloadService modelDownloadService(ModelDownloadServiceRef ref) {
 }
 
 @Riverpod(keepAlive: true)
-Future<String?> modelPath(ModelPathRef ref) async {
-  final service = ref.watch(modelDownloadServiceProvider);
-  if (!await service.isModelDownloaded()) {
-    return null;
-  }
-  return service.getModelPath();
-}
-
-@Riverpod(keepAlive: true)
 class IncognitoModeController extends _$IncognitoModeController {
   @override
   bool build() => false;
@@ -39,7 +30,6 @@ class IncognitoModeController extends _$IncognitoModeController {
         },
       );
       ref.read(modelDownloadProgressProvider.notifier).state = null;
-      ref.invalidate(modelPathProvider);
       state = true;
     } on Object {
       ref.read(modelDownloadProgressProvider.notifier).state = null;

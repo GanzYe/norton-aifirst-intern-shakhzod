@@ -11,5 +11,7 @@ abstract class ScamAnalysis with _$ScamAnalysis {
     required String explanation,
     @Default(false) bool resolvedLocally,
     @Default(false) bool localModelUnavailable,
+    @Default(false) bool cloudFallback,
+    @Default(false) bool localAnalysisFailed,
   }) = _ScamAnalysis;
 }

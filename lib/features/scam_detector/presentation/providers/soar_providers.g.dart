@@ -96,7 +96,7 @@ final connectivityServiceProvider = Provider<ConnectivityService>.internal(
 // ignore: unused_element
 typedef ConnectivityServiceRef = ProviderRef<ConnectivityService>;
 String _$localScamAnalysisServiceHash() =>
-    r'067eb74b4e85e3993e5bc71bc7c3dde6476709a9';
+    r'a3fa8ac649e78e7b88c576927508198e565fe240';
 
 /// See also [localScamAnalysisService].
 @ProviderFor(localScamAnalysisService)
@@ -115,7 +115,7 @@ final localScamAnalysisServiceProvider =
 // ignore: unused_element
 typedef LocalScamAnalysisServiceRef = ProviderRef<LocalScamAnalysisService>;
 String _$piiRedactionRepositoryHash() =>
-    r'd0ae9ab34293b859c161586d5f77bfeaf8d0180a';
+    r'1bc4c534844e72d178466830f717445b72a3b72b';
 
 /// See also [piiRedactionRepository].
 @ProviderFor(piiRedactionRepository)

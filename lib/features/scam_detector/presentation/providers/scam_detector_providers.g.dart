@@ -43,8 +43,26 @@ final geminiRemoteDataSourceProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef GeminiRemoteDataSourceRef = ProviderRef<GeminiRemoteDataSource>;
+String _$groqRemoteDataSourceHash() =>
+    r'3e9de3bcdeec980e2a1d0be1a2381986903e744c';
+
+/// See also [groqRemoteDataSource].
+@ProviderFor(groqRemoteDataSource)
+final groqRemoteDataSourceProvider = Provider<GroqRemoteDataSource>.internal(
+  groqRemoteDataSource,
+  name: r'groqRemoteDataSourceProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$groqRemoteDataSourceHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef GroqRemoteDataSourceRef = ProviderRef<GroqRemoteDataSource>;
 String _$scamAnalysisRepositoryHash() =>
-    r'ae7a4535f664e69e75f13df816072cd29412baf4';
+    r'd253a14c461a86571ff0a848153c223ab7305113';
 
 /// See also [scamAnalysisRepository].
 @ProviderFor(scamAnalysisRepository)

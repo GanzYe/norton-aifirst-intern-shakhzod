@@ -56,21 +56,17 @@ ConnectivityService connectivityService(ConnectivityServiceRef ref) {
 LocalScamAnalysisService localScamAnalysisService(
   LocalScamAnalysisServiceRef ref,
 ) {
-  final modelPathAsync = ref.watch(modelPathProvider);
-  final path = modelPathAsync.valueOrNull ?? '';
   return LocalScamAnalysisService(
     llama: FlutterLlama.instance,
-    modelPath: path,
+    modelDownloadService: ref.watch(modelDownloadServiceProvider),
   );
 }
 
 @Riverpod(keepAlive: true)
 PiiRedactionRepository piiRedactionRepository(PiiRedactionRepositoryRef ref) {
-  final modelPathAsync = ref.watch(modelPathProvider);
-  final path = modelPathAsync.valueOrNull ?? '';
   return LocalPiiRedactionService(
     llama: FlutterLlama.instance,
-    modelPath: path,
+    modelDownloadService: ref.watch(modelDownloadServiceProvider),
   );
 }
 

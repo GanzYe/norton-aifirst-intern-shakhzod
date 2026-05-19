@@ -3,7 +3,9 @@ import 'dart:developer' as developer;
 
 import 'package:flutter_llama/flutter_llama.dart';
 import 'package:scam_message_detector/features/scam_detector/data/dtos/scam_analysis_dto.dart';
+import 'package:scam_message_detector/features/scam_detector/data/services/model_download_service.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/scam_analysis.dart';
+
 const _scamAnalysisSystemPrompt = '''
 You are a cybersecurity expert analyzing messages for scam, phishing, and fraud risk.
 Respond with ONLY a valid JSON object and no other text:
@@ -24,29 +26,40 @@ class LocalScamAnalysisException implements Exception {
 }
 
 /// On-device scam verdict via flutter_llama (offline analysis path).
+///
+/// The model path is resolved lazily from [ModelDownloadService] at each
+/// [analyze] call so newly downloaded models become usable without a
+/// provider rebuild race.
 class LocalScamAnalysisService {
   LocalScamAnalysisService({
     required FlutterLlama llama,
-    required String modelPath,
+    required ModelDownloadService modelDownloadService,
   })  : _llama = llama,
-        _modelPath = modelPath;
+        _modelDownload = modelDownloadService;
 
   final FlutterLlama _llama;
-  final String _modelPath;
+  final ModelDownloadService _modelDownload;
 
   bool _modelLoaded = false;
+  String? _loadedFromPath;
 
-  bool get isModelReady => _modelPath.isNotEmpty;
+  /// True when a .gguf model file exists on device.
+  Future<bool> isModelAvailable() => _modelDownload.isModelDownloaded();
 
   Future<ScamAnalysis> analyze(String message) async {
-    if (!isModelReady) {
-      throw const LocalScamAnalysisException('Local model path is not set.');
+    if (!await _modelDownload.isModelDownloaded()) {
+      throw const LocalScamAnalysisException(
+        'Local model is not downloaded.',
+      );
     }
 
     try {
-      await _ensureModelLoaded();
+      final modelPath = await _modelDownload.getModelPath();
+      await _ensureModelLoaded(modelPath);
+
       final params = GenerationParams(
-        prompt: '$_scamAnalysisSystemPrompt\n\nAnalyze this message:\n\n$message',
+        prompt: '$_scamAnalysisSystemPrompt\n\nAnalyze this message:\n\n'
+            '$message',
         temperature: 0.2,
         topP: 0.9,
         topK: 40,
@@ -54,14 +67,14 @@ class LocalScamAnalysisService {
         repeatPenalty: 1.1,
       );
 
-      final buffer = StringBuffer();
-      await for (final token in _llama.generateStream(params)) {
-        buffer.write(token);
-      }
-
-      final raw = buffer.toString().trim();
+      // Non-streaming generate() avoids the EventChannel race condition in
+      // flutter_llama 1.1.2 (NO_EVENT_SINK).
+      final response = await _llama.generate(params);
+      final raw = response.text.trim();
       if (raw.isEmpty) {
-        throw const LocalScamAnalysisException('Empty response from local model.');
+        throw const LocalScamAnalysisException(
+          'Empty response from local model.',
+        );
       }
 
       return _parseResponse(raw).copyWith(resolvedLocally: true);
@@ -74,23 +87,31 @@ class LocalScamAnalysisService {
         error: e,
         stackTrace: stack,
       );
+      // A failed decode (e.g. native ggml_abort) can leave the underlying
+      // context in a broken state; force a fresh load on the next attempt.
+      _modelLoaded = false;
+      _loadedFromPath = null;
       throw LocalScamAnalysisException('Local analysis failed: $e');
     }
   }
 
-  Future<void> _ensureModelLoaded() async {
-    if (_modelLoaded) {
+  Future<void> _ensureModelLoaded(String modelPath) async {
+    if (_modelLoaded && _loadedFromPath == modelPath) {
       return;
     }
 
+    // CPU-only inference. Some Android GPUs (Vulkan/OpenCL backends used by
+    // llama.cpp) trigger SIGABRT inside ggml during decode when off-loading
+    // all layers; falling back to CPU is a small Qwen-0.5B model and runs
+    // comfortably without GPU acceleration.
     final loaded = await _llama.loadModel(
       LlamaConfig(
-        modelPath: _modelPath,
+        modelPath: modelPath,
         nThreads: 4,
-        nGpuLayers: -1,
+        nGpuLayers: 0,
         contextSize: 2048,
-        batchSize: 512,
-        useGpu: true,
+        batchSize: 256,
+        useGpu: false,
         verbose: false,
       ),
     );
@@ -98,6 +119,7 @@ class LocalScamAnalysisService {
       throw const LocalScamAnalysisException('Failed to load local model.');
     }
     _modelLoaded = true;
+    _loadedFromPath = modelPath;
   }
 
   ScamAnalysis _parseResponse(String raw) {

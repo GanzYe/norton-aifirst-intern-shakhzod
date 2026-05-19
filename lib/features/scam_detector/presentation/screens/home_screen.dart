@@ -10,10 +10,9 @@ import 'package:scam_message_detector/features/scam_detector/domain/entities/sca
 import 'package:scam_message_detector/features/scam_detector/presentation/constants/example_messages.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/providers/scam_analysis_controller.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/analyze_button.dart';
-import 'package:scam_message_detector/features/scam_detector/presentation/widgets/incognito_mode_switch.dart';
+import 'package:scam_message_detector/features/scam_detector/presentation/widgets/app_modal_dialog.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/example_message_tile.dart';
-import 'package:scam_message_detector/features/scam_detector/presentation/widgets/local_analysis_warning_banner.dart';
-import 'package:scam_message_detector/features/scam_detector/presentation/widgets/local_model_unavailable_message.dart';
+import 'package:scam_message_detector/features/scam_detector/presentation/widgets/incognito_mode_switch.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/result_card.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/smd_logo.dart';
 
@@ -97,21 +96,62 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     setState(() => _attachedEmlRaw = null);
   }
 
-  Widget _buildAnalysisResult(ScamAnalysis analysis) {
+  Widget? _buildAnalysisResult(ScamAnalysis analysis) {
+    // Failure states render nothing inline; a modal is shown via the
+    // controller listener instead.
+    if (analysis.localModelUnavailable || analysis.localAnalysisFailed) {
+      return null;
+    }
+    return ResultCard(analysis: analysis);
+  }
+
+  void _maybeShowAnalysisWarning(ScamAnalysis analysis) {
+    if (!mounted) return;
+
     if (analysis.localModelUnavailable) {
-      return const LocalModelUnavailableMessage();
+      showAppNoticeDialog(
+        context,
+        title: 'Analysis unavailable',
+        message:
+            "No internet connection and the local model hasn't been "
+            'downloaded yet. Please connect to the internet to analyze '
+            'this message, or enable Incognito mode to download the '
+            'on-device model.',
+        tone: AppModalTone.danger,
+        icon: Icons.cloud_off_outlined,
+      );
+      return;
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (analysis.resolvedLocally) ...[
-          const LocalAnalysisWarningBanner(),
-          const SizedBox(height: AppSpacing.md),
-        ],
-        ResultCard(analysis: analysis),
-      ],
-    );
+    if (analysis.localAnalysisFailed) {
+      showAppNoticeDialog(
+        context,
+        title: 'On-device analysis failed',
+        message:
+            "We couldn't complete on-device analysis for this message. "
+            'Please connect to the internet for full analysis, or try '
+            'again in a moment.',
+        tone: AppModalTone.danger,
+        icon: Icons.report_gmailerrorred_outlined,
+      );
+      return;
+    }
+
+    if (analysis.resolvedLocally) {
+      final cloudFallback = analysis.cloudFallback;
+      showAppNoticeDialog(
+        context,
+        title: 'Local analysis only',
+        tone: AppModalTone.warning,
+        message: cloudFallback
+            ? 'Cloud analysis is temporarily unavailable. This result was '
+                  'generated on-device and may be less accurate. Try again '
+                  'later for full analysis.'
+            : 'No internet connection. This result was generated '
+                  'on-device and may be less accurate. Connect to the '
+                  'internet for full analysis.',
+      );
+    }
   }
 
   void _onExampleTap(String body) {
@@ -133,18 +173,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           if (analysis != null && analysis != _lastShownAnalysis) {
             setState(() => _lastShownAnalysis = analysis);
             _resultAnimController.forward(from: 0);
+            _maybeShowAnalysisWarning(analysis);
           }
         },
       );
       if (previous?.isLoading == true && next.hasError && mounted) {
         final error = next.error;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error?.toString() ?? 'Analysis failed.')),
+        showAppNoticeDialog(
+          context,
+          title: 'Analysis failed',
+          message: error?.toString() ?? 'Analysis failed. Please try again.',
+          tone: AppModalTone.danger,
         );
       }
     });
 
     final analysis = analysisState.valueOrNull;
+    final resultWidget =
+        analysis != null ? _buildAnalysisResult(analysis) : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -224,7 +270,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ),
               ),
             ),
-            if (analysis != null)
+            if (resultWidget != null)
               SliverPadding(
                 padding: AppSpacing.resultSection,
                 sliver: SliverToBoxAdapter(
@@ -232,7 +278,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     opacity: _fadeAnimation,
                     child: SlideTransition(
                       position: _slideAnimation,
-                      child: _buildAnalysisResult(analysis),
+                      child: resultWidget,
                     ),
                   ),
                 ),

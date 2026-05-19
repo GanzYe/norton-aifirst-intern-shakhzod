@@ -1,8 +1,10 @@
+import 'package:dio/dio.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:scam_message_detector/core/env/env.dart';
 import 'package:scam_message_detector/features/scam_detector/data/datasources/gemini_remote_datasource.dart';
 import 'package:scam_message_detector/features/scam_detector/data/datasources/gemini_scam_analysis_config.dart';
+import 'package:scam_message_detector/features/scam_detector/data/datasources/groq_remote_datasource.dart';
 import 'package:scam_message_detector/features/scam_detector/data/repositories/scam_analysis_repository_impl.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/scam_analysis_repository.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/usecases/analyze_message_usecase.dart';
@@ -28,8 +30,24 @@ GeminiRemoteDataSource geminiRemoteDataSource(GeminiRemoteDataSourceRef ref) {
 }
 
 @Riverpod(keepAlive: true)
+GroqRemoteDataSource groqRemoteDataSource(GroqRemoteDataSourceRef ref) {
+  final dio = Dio(
+    BaseOptions(
+      baseUrl: 'https://api.groq.com',
+      connectTimeout: const Duration(seconds: 20),
+      receiveTimeout: const Duration(seconds: 60),
+      validateStatus: (status) => status != null && status < 500,
+    ),
+  );
+  return GroqRemoteDataSource(dio: dio, apiKey: Env.groqApiKey);
+}
+
+@Riverpod(keepAlive: true)
 ScamAnalysisRepository scamAnalysisRepository(ScamAnalysisRepositoryRef ref) {
-  return ScamAnalysisRepositoryImpl(ref.watch(geminiRemoteDataSourceProvider));
+  return ScamAnalysisRepositoryImpl(
+    groqRemoteDataSource: ref.watch(groqRemoteDataSourceProvider),
+    geminiRemoteDataSource: ref.watch(geminiRemoteDataSourceProvider),
+  );
 }
 
 @Riverpod(keepAlive: true)

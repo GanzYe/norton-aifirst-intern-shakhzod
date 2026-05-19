@@ -1,37 +1,42 @@
 import 'dart:developer' as developer;
 
 import 'package:flutter_llama/flutter_llama.dart';
+import 'package:scam_message_detector/features/scam_detector/data/services/model_download_service.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/pii_redaction_repository.dart';
 
 const _piiSystemPrompt =
     'Redact all PII from the following text, replacing it with [REDACTED]. '
     'Return only the scrubbed text without any additional commentary.';
 
-/// On-device PII scrubbing via flutter_llama; regex fallback when model unavailable.
+/// On-device PII scrubbing via flutter_llama; regex fallback when the model
+/// is unavailable or inference fails.
 class LocalPiiRedactionService implements PiiRedactionRepository {
   LocalPiiRedactionService({
     required FlutterLlama llama,
-    required String modelPath,
+    required ModelDownloadService modelDownloadService,
   })  : _llama = llama,
-        _modelPath = modelPath;
+        _modelDownload = modelDownloadService;
 
   final FlutterLlama _llama;
-  final String _modelPath;
+  final ModelDownloadService _modelDownload;
 
   bool _modelLoaded = false;
+  String? _loadedFromPath;
 
   @override
   Future<String> scrubPii(String input) async {
-    if (_modelPath.isEmpty) {
+    if (!await _modelDownload.isModelDownloaded()) {
       developer.log(
-        'LLAMA_MODEL_PATH unset; using regex PII fallback.',
+        'Local model not downloaded; using regex PII fallback.',
         name: 'LocalPiiRedactionService',
       );
       return _regexFallback(input);
     }
 
     try {
-      await _ensureModelLoaded();
+      final modelPath = await _modelDownload.getModelPath();
+      await _ensureModelLoaded(modelPath);
+
       final params = GenerationParams(
         prompt: '$_piiSystemPrompt\n\n$input',
         temperature: 0.1,
@@ -41,12 +46,10 @@ class LocalPiiRedactionService implements PiiRedactionRepository {
         repeatPenalty: 1.1,
       );
 
-      final buffer = StringBuffer();
-      await for (final token in _llama.generateStream(params)) {
-        buffer.write(token);
-      }
-
-      final scrubbed = buffer.toString().trim();
+      // Non-streaming generate() sidesteps the flutter_llama 1.1.2
+      // EventChannel race (NO_EVENT_SINK).
+      final response = await _llama.generate(params);
+      final scrubbed = response.text.trim();
       if (scrubbed.isEmpty) {
         return _regexFallback(input);
       }
@@ -58,22 +61,28 @@ class LocalPiiRedactionService implements PiiRedactionRepository {
         error: e,
         stackTrace: stack,
       );
+      // Native llama.cpp aborts can wedge the loaded context; reset so the
+      // next call re-initializes cleanly.
+      _modelLoaded = false;
+      _loadedFromPath = null;
       return _regexFallback(input);
     }
   }
 
-  Future<void> _ensureModelLoaded() async {
-    if (_modelLoaded) {
+  Future<void> _ensureModelLoaded(String modelPath) async {
+    if (_modelLoaded && _loadedFromPath == modelPath) {
       return;
     }
 
+    // CPU-only inference for the same reason as LocalScamAnalysisService:
+    // GPU off-load triggers ggml_abort on some Android devices.
     final config = LlamaConfig(
-      modelPath: _modelPath,
+      modelPath: modelPath,
       nThreads: 4,
-      nGpuLayers: -1,
+      nGpuLayers: 0,
       contextSize: 2048,
-      batchSize: 512,
-      useGpu: true,
+      batchSize: 256,
+      useGpu: false,
       verbose: false,
     );
 
@@ -82,6 +91,7 @@ class LocalPiiRedactionService implements PiiRedactionRepository {
       throw const PiiRedactionException('Failed to load local Llama model.');
     }
     _modelLoaded = true;
+    _loadedFromPath = modelPath;
   }
 
   String _regexFallback(String input) {

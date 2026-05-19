@@ -24,25 +24,8 @@ final modelDownloadServiceProvider = Provider<ModelDownloadService>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef ModelDownloadServiceRef = ProviderRef<ModelDownloadService>;
-String _$modelPathHash() => r'3b62d252477b23a4e2498e45b53224dbecdc7ca8';
-
-/// See also [modelPath].
-@ProviderFor(modelPath)
-final modelPathProvider = FutureProvider<String?>.internal(
-  modelPath,
-  name: r'modelPathProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$modelPathHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef ModelPathRef = FutureProviderRef<String?>;
 String _$incognitoModeControllerHash() =>
-    r'98740ca2a9269158de9267f7f97f0b9ab4756cb3';
+    r'0e09db1ec5a7571a17a56ef59751d3fd8ca05514';
 
 /// See also [IncognitoModeController].
 @ProviderFor(IncognitoModeController)

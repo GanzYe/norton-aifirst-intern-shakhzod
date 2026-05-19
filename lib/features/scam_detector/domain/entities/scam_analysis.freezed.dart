@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ScamAnalysis {
 
- RiskLevel get riskLevel; int get confidence; String get explanation; bool get resolvedLocally; bool get localModelUnavailable;
+ RiskLevel get riskLevel; int get confidence; String get explanation; bool get resolvedLocally; bool get localModelUnavailable; bool get cloudFallback; bool get localAnalysisFailed;
 /// Create a copy of ScamAnalysis
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $ScamAnalysisCopyWith<ScamAnalysis> get copyWith => _$ScamAnalysisCopyWithImpl<S
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ScamAnalysis&&(identical(other.riskLevel, riskLevel) || other.riskLevel == riskLevel)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.explanation, explanation) || other.explanation == explanation)&&(identical(other.resolvedLocally, resolvedLocally) || other.resolvedLocally == resolvedLocally)&&(identical(other.localModelUnavailable, localModelUnavailable) || other.localModelUnavailable == localModelUnavailable));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ScamAnalysis&&(identical(other.riskLevel, riskLevel) || other.riskLevel == riskLevel)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.explanation, explanation) || other.explanation == explanation)&&(identical(other.resolvedLocally, resolvedLocally) || other.resolvedLocally == resolvedLocally)&&(identical(other.localModelUnavailable, localModelUnavailable) || other.localModelUnavailable == localModelUnavailable)&&(identical(other.cloudFallback, cloudFallback) || other.cloudFallback == cloudFallback)&&(identical(other.localAnalysisFailed, localAnalysisFailed) || other.localAnalysisFailed == localAnalysisFailed));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,riskLevel,confidence,explanation,resolvedLocally,localModelUnavailable);
+int get hashCode => Object.hash(runtimeType,riskLevel,confidence,explanation,resolvedLocally,localModelUnavailable,cloudFallback,localAnalysisFailed);
 
 @override
 String toString() {
-  return 'ScamAnalysis(riskLevel: $riskLevel, confidence: $confidence, explanation: $explanation, resolvedLocally: $resolvedLocally, localModelUnavailable: $localModelUnavailable)';
+  return 'ScamAnalysis(riskLevel: $riskLevel, confidence: $confidence, explanation: $explanation, resolvedLocally: $resolvedLocally, localModelUnavailable: $localModelUnavailable, cloudFallback: $cloudFallback, localAnalysisFailed: $localAnalysisFailed)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $ScamAnalysisCopyWith<$Res>  {
   factory $ScamAnalysisCopyWith(ScamAnalysis value, $Res Function(ScamAnalysis) _then) = _$ScamAnalysisCopyWithImpl;
 @useResult
 $Res call({
- RiskLevel riskLevel, int confidence, String explanation, bool resolvedLocally, bool localModelUnavailable
+ RiskLevel riskLevel, int confidence, String explanation, bool resolvedLocally, bool localModelUnavailable, bool cloudFallback, bool localAnalysisFailed
 });
 
 
@@ -62,13 +62,15 @@ class _$ScamAnalysisCopyWithImpl<$Res>
 
 /// Create a copy of ScamAnalysis
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? riskLevel = null,Object? confidence = null,Object? explanation = null,Object? resolvedLocally = null,Object? localModelUnavailable = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? riskLevel = null,Object? confidence = null,Object? explanation = null,Object? resolvedLocally = null,Object? localModelUnavailable = null,Object? cloudFallback = null,Object? localAnalysisFailed = null,}) {
   return _then(_self.copyWith(
 riskLevel: null == riskLevel ? _self.riskLevel : riskLevel // ignore: cast_nullable_to_non_nullable
 as RiskLevel,confidence: null == confidence ? _self.confidence : confidence // ignore: cast_nullable_to_non_nullable
 as int,explanation: null == explanation ? _self.explanation : explanation // ignore: cast_nullable_to_non_nullable
 as String,resolvedLocally: null == resolvedLocally ? _self.resolvedLocally : resolvedLocally // ignore: cast_nullable_to_non_nullable
 as bool,localModelUnavailable: null == localModelUnavailable ? _self.localModelUnavailable : localModelUnavailable // ignore: cast_nullable_to_non_nullable
+as bool,cloudFallback: null == cloudFallback ? _self.cloudFallback : cloudFallback // ignore: cast_nullable_to_non_nullable
+as bool,localAnalysisFailed: null == localAnalysisFailed ? _self.localAnalysisFailed : localAnalysisFailed // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }
@@ -154,10 +156,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( RiskLevel riskLevel,  int confidence,  String explanation,  bool resolvedLocally,  bool localModelUnavailable)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( RiskLevel riskLevel,  int confidence,  String explanation,  bool resolvedLocally,  bool localModelUnavailable,  bool cloudFallback,  bool localAnalysisFailed)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ScamAnalysis() when $default != null:
-return $default(_that.riskLevel,_that.confidence,_that.explanation,_that.resolvedLocally,_that.localModelUnavailable);case _:
+return $default(_that.riskLevel,_that.confidence,_that.explanation,_that.resolvedLocally,_that.localModelUnavailable,_that.cloudFallback,_that.localAnalysisFailed);case _:
   return orElse();
 
 }
@@ -175,10 +177,10 @@ return $default(_that.riskLevel,_that.confidence,_that.explanation,_that.resolve
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( RiskLevel riskLevel,  int confidence,  String explanation,  bool resolvedLocally,  bool localModelUnavailable)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( RiskLevel riskLevel,  int confidence,  String explanation,  bool resolvedLocally,  bool localModelUnavailable,  bool cloudFallback,  bool localAnalysisFailed)  $default,) {final _that = this;
 switch (_that) {
 case _ScamAnalysis():
-return $default(_that.riskLevel,_that.confidence,_that.explanation,_that.resolvedLocally,_that.localModelUnavailable);case _:
+return $default(_that.riskLevel,_that.confidence,_that.explanation,_that.resolvedLocally,_that.localModelUnavailable,_that.cloudFallback,_that.localAnalysisFailed);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -195,10 +197,10 @@ return $default(_that.riskLevel,_that.confidence,_that.explanation,_that.resolve
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( RiskLevel riskLevel,  int confidence,  String explanation,  bool resolvedLocally,  bool localModelUnavailable)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( RiskLevel riskLevel,  int confidence,  String explanation,  bool resolvedLocally,  bool localModelUnavailable,  bool cloudFallback,  bool localAnalysisFailed)?  $default,) {final _that = this;
 switch (_that) {
 case _ScamAnalysis() when $default != null:
-return $default(_that.riskLevel,_that.confidence,_that.explanation,_that.resolvedLocally,_that.localModelUnavailable);case _:
+return $default(_that.riskLevel,_that.confidence,_that.explanation,_that.resolvedLocally,_that.localModelUnavailable,_that.cloudFallback,_that.localAnalysisFailed);case _:
   return null;
 
 }
@@ -210,7 +212,7 @@ return $default(_that.riskLevel,_that.confidence,_that.explanation,_that.resolve
 
 
 class _ScamAnalysis implements ScamAnalysis {
-  const _ScamAnalysis({required this.riskLevel, required this.confidence, required this.explanation, this.resolvedLocally = false, this.localModelUnavailable = false});
+  const _ScamAnalysis({required this.riskLevel, required this.confidence, required this.explanation, this.resolvedLocally = false, this.localModelUnavailable = false, this.cloudFallback = false, this.localAnalysisFailed = false});
   
 
 @override final  RiskLevel riskLevel;
@@ -218,6 +220,8 @@ class _ScamAnalysis implements ScamAnalysis {
 @override final  String explanation;
 @override@JsonKey() final  bool resolvedLocally;
 @override@JsonKey() final  bool localModelUnavailable;
+@override@JsonKey() final  bool cloudFallback;
+@override@JsonKey() final  bool localAnalysisFailed;
 
 /// Create a copy of ScamAnalysis
 /// with the given fields replaced by the non-null parameter values.
@@ -229,16 +233,16 @@ _$ScamAnalysisCopyWith<_ScamAnalysis> get copyWith => __$ScamAnalysisCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ScamAnalysis&&(identical(other.riskLevel, riskLevel) || other.riskLevel == riskLevel)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.explanation, explanation) || other.explanation == explanation)&&(identical(other.resolvedLocally, resolvedLocally) || other.resolvedLocally == resolvedLocally)&&(identical(other.localModelUnavailable, localModelUnavailable) || other.localModelUnavailable == localModelUnavailable));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ScamAnalysis&&(identical(other.riskLevel, riskLevel) || other.riskLevel == riskLevel)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.explanation, explanation) || other.explanation == explanation)&&(identical(other.resolvedLocally, resolvedLocally) || other.resolvedLocally == resolvedLocally)&&(identical(other.localModelUnavailable, localModelUnavailable) || other.localModelUnavailable == localModelUnavailable)&&(identical(other.cloudFallback, cloudFallback) || other.cloudFallback == cloudFallback)&&(identical(other.localAnalysisFailed, localAnalysisFailed) || other.localAnalysisFailed == localAnalysisFailed));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,riskLevel,confidence,explanation,resolvedLocally,localModelUnavailable);
+int get hashCode => Object.hash(runtimeType,riskLevel,confidence,explanation,resolvedLocally,localModelUnavailable,cloudFallback,localAnalysisFailed);
 
 @override
 String toString() {
-  return 'ScamAnalysis(riskLevel: $riskLevel, confidence: $confidence, explanation: $explanation, resolvedLocally: $resolvedLocally, localModelUnavailable: $localModelUnavailable)';
+  return 'ScamAnalysis(riskLevel: $riskLevel, confidence: $confidence, explanation: $explanation, resolvedLocally: $resolvedLocally, localModelUnavailable: $localModelUnavailable, cloudFallback: $cloudFallback, localAnalysisFailed: $localAnalysisFailed)';
 }
 
 
@@ -249,7 +253,7 @@ abstract mixin class _$ScamAnalysisCopyWith<$Res> implements $ScamAnalysisCopyWi
   factory _$ScamAnalysisCopyWith(_ScamAnalysis value, $Res Function(_ScamAnalysis) _then) = __$ScamAnalysisCopyWithImpl;
 @override @useResult
 $Res call({
- RiskLevel riskLevel, int confidence, String explanation, bool resolvedLocally, bool localModelUnavailable
+ RiskLevel riskLevel, int confidence, String explanation, bool resolvedLocally, bool localModelUnavailable, bool cloudFallback, bool localAnalysisFailed
 });
 
 
@@ -266,13 +270,15 @@ class __$ScamAnalysisCopyWithImpl<$Res>
 
 /// Create a copy of ScamAnalysis
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? riskLevel = null,Object? confidence = null,Object? explanation = null,Object? resolvedLocally = null,Object? localModelUnavailable = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? riskLevel = null,Object? confidence = null,Object? explanation = null,Object? resolvedLocally = null,Object? localModelUnavailable = null,Object? cloudFallback = null,Object? localAnalysisFailed = null,}) {
   return _then(_ScamAnalysis(
 riskLevel: null == riskLevel ? _self.riskLevel : riskLevel // ignore: cast_nullable_to_non_nullable
 as RiskLevel,confidence: null == confidence ? _self.confidence : confidence // ignore: cast_nullable_to_non_nullable
 as int,explanation: null == explanation ? _self.explanation : explanation // ignore: cast_nullable_to_non_nullable
 as String,resolvedLocally: null == resolvedLocally ? _self.resolvedLocally : resolvedLocally // ignore: cast_nullable_to_non_nullable
 as bool,localModelUnavailable: null == localModelUnavailable ? _self.localModelUnavailable : localModelUnavailable // ignore: cast_nullable_to_non_nullable
+as bool,cloudFallback: null == cloudFallback ? _self.cloudFallback : cloudFallback // ignore: cast_nullable_to_non_nullable
+as bool,localAnalysisFailed: null == localAnalysisFailed ? _self.localAnalysisFailed : localAnalysisFailed // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }
