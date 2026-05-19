@@ -9,6 +9,7 @@ import 'package:scam_message_detector/core/theme/app_text_styles.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/scam_analysis.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/constants/example_messages.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/providers/scam_analysis_controller.dart';
+import 'package:scam_message_detector/features/scam_detector/presentation/utils/friendly_error.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/analyze_button.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/app_modal_dialog.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/example_message_tile.dart';
@@ -177,12 +178,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           }
         },
       );
-      if (previous?.isLoading == true && next.hasError && mounted) {
-        final error = next.error;
+      if ((previous?.isLoading ?? false) && next.hasError && mounted) {
         showAppNoticeDialog(
           context,
           title: 'Analysis failed',
-          message: error?.toString() ?? 'Analysis failed. Please try again.',
+          message: friendlyAnalysisError(next.error),
           tone: AppModalTone.danger,
         );
       }
