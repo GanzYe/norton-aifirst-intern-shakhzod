@@ -22,7 +22,7 @@ class ScamAnalysisController extends _$ScamAnalysisController {
 
     state = await AsyncValue.guard(() async {
       try {
-        final incognito = ref.read(incognitoModeProvider);
+        final incognito = ref.read(incognitoModeControllerProvider);
         final kind = emlRawContent != null
             ? SoarInputKind.eml
             : InputClassifier.classify(message);

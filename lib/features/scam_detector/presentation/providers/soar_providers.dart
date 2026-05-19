@@ -8,6 +8,7 @@ import 'package:scam_message_detector/features/scam_detector/data/repositories/u
 import 'package:scam_message_detector/features/scam_detector/data/repositories/virus_total_repository_impl.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/local_pii_redaction_service.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/abuse_ipdb_repository.dart';
+import 'package:scam_message_detector/features/scam_detector/presentation/providers/incognito_mode_provider.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/eml_parse_repository.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/pii_redaction_repository.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/url_scan_repository.dart';
@@ -46,9 +47,11 @@ EmlParseRepository emlParseRepository(EmlParseRepositoryRef ref) {
 
 @Riverpod(keepAlive: true)
 PiiRedactionRepository piiRedactionRepository(PiiRedactionRepositoryRef ref) {
+  final modelPathAsync = ref.watch(modelPathProvider);
+  final path = modelPathAsync.valueOrNull ?? '';
   return LocalPiiRedactionService(
     llama: FlutterLlama.instance,
-    modelPath: Env.llamaModelPath,
+    modelPath: path,
   );
 }
 
