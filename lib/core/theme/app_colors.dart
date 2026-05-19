@@ -20,11 +20,9 @@ abstract final class AppColors {
   static const double opacityRiskFill = 0.15;
   static const double opacityWarningFill = 0.14;
 
-  static Color get warningBackground =>
-      nortonYellow.withValues(alpha: opacityWarningFill);
+  static Color get warningBackground => nortonYellow.withValues();
 
-  static Color get errorBackground =>
-      dangerousRed.withValues(alpha: opacityRiskFill);
+  static Color get errorBackground => surface.withValues();
   static const double opacityRiskTrack = 0.2;
 
   static Color get hintMuted => textMuted.withValues(alpha: opacityHint);
