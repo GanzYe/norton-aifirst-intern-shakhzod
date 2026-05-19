@@ -82,15 +82,15 @@ class OrchestrateScamAnalysisUseCase {
 
     if (kind == SoarInputKind.eml) {
       final emlRaw = input.emlRawContent ?? trimmed;
-      final parsed = _emlParseRepository.parse(emlRaw);
-      emailAuth = parsed.emailAuth;
-      contentForAnalysis = parsed.bodyPreview.isNotEmpty
+      final parsed = _safeParseEml(emlRaw);
+      emailAuth = parsed?.emailAuth;
+      contentForAnalysis = (parsed != null && parsed.bodyPreview.isNotEmpty)
           ? parsed.bodyPreview
           : emlRaw;
     }
 
     final scrubbed = input.incognitoEnabled
-        ? await _piiRedactionRepository.scrubPii(contentForAnalysis)
+        ? await _safeScrubPii(contentForAnalysis)
         : contentForAnalysis;
 
     final skipOsint = input.incognitoEnabled && kind == SoarInputKind.plainText;
@@ -118,12 +118,20 @@ class OrchestrateScamAnalysisUseCase {
 
     try {
       return await _scamAnalysisRepository.analyzeAugmentedPrompt(masterPrompt);
-    } on GeminiDataSourceException {
+    } on GeminiDataSourceException catch (cloudError, cloudStack) {
+      developer.log(
+        'Cloud analysis exhausted; attempting on-device fallback.',
+        name: 'OrchestrateScamAnalysisUseCase',
+        error: cloudError,
+        stackTrace: cloudStack,
+      );
       final localResult = await _tryLocalFallback(scrubbed);
       if (localResult != null) {
         return localResult.copyWith(cloudFallback: true);
       }
-      rethrow;
+      throw const AnalyzeMessageException(
+        'Analysis is currently unavailable. Please try again in a moment.',
+      );
     }
   }
 
@@ -139,14 +147,14 @@ class OrchestrateScamAnalysisUseCase {
 
     if (kind == SoarInputKind.eml) {
       final emlRaw = input.emlRawContent ?? trimmed;
-      final parsed = _emlParseRepository.parse(emlRaw);
-      contentForAnalysis = parsed.bodyPreview.isNotEmpty
+      final parsed = _safeParseEml(emlRaw);
+      contentForAnalysis = (parsed != null && parsed.bodyPreview.isNotEmpty)
           ? parsed.bodyPreview
           : emlRaw;
     }
 
     final scrubbed = input.incognitoEnabled
-        ? await _piiRedactionRepository.scrubPii(contentForAnalysis)
+        ? await _safeScrubPii(contentForAnalysis)
         : contentForAnalysis;
 
     final modelReady = await _modelDownloadService.isModelDownloaded();
@@ -177,6 +185,36 @@ class OrchestrateScamAnalysisUseCase {
         explanation: '',
         localAnalysisFailed: true,
       );
+    }
+  }
+
+  /// Best-effort EML parse. Returns `null` when the input isn't a valid MIME
+  /// message so the caller can fall back to treating it as plain text.
+  ParsedEmlContent? _safeParseEml(String emlRaw) {
+    try {
+      return _emlParseRepository.parse(emlRaw);
+    } on Object catch (e, stack) {
+      developer.log(
+        'EML parse failed; treating as plain text',
+        name: 'OrchestrateScamAnalysisUseCase',
+        error: e,
+        stackTrace: stack,
+      );
+      return null;
+    }
+  }
+
+  Future<String> _safeScrubPii(String content) async {
+    try {
+      return await _piiRedactionRepository.scrubPii(content);
+    } on Object catch (e, stack) {
+      developer.log(
+        'PII redaction failed; sending original content',
+        name: 'OrchestrateScamAnalysisUseCase',
+        error: e,
+        stackTrace: stack,
+      );
+      return content;
     }
   }
 
