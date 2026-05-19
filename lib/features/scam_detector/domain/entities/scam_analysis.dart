@@ -9,5 +9,7 @@ abstract class ScamAnalysis with _$ScamAnalysis {
     required RiskLevel riskLevel,
     required int confidence,
     required String explanation,
+    @Default(false) bool resolvedLocally,
+    @Default(false) bool localModelUnavailable,
   }) = _ScamAnalysis;
 }
