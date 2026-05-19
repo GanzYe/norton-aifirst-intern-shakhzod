@@ -1,5 +1,6 @@
 import 'dart:developer' as developer;
 
+import 'package:scam_message_detector/core/logging/pipeline_log.dart';
 import 'package:scam_message_detector/features/scam_detector/data/datasources/gemini_remote_datasource.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/connectivity_service.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/local_scam_analysis_service.dart';
@@ -57,8 +58,18 @@ class OrchestrateScamAnalysisUseCase {
   final LocalScamAnalysisService _localScamAnalysisService;
   final ModelDownloadService _modelDownloadService;
 
+  static const _stage = 'ORCHESTRATOR';
+
   Future<ScamAnalysis> call(SoarAnalysisInput input) async {
     final trimmed = input.rawContent.trim();
+    PipelineLog.start(
+      _stage,
+      context: {
+        'inputKind': input.kind.name,
+        'incognito': input.incognitoEnabled,
+        'inputChars': trimmed.length,
+      },
+    );
     if (trimmed.isEmpty) {
       throw const AnalyzeMessageException('Please enter a message to analyze.');
     }
@@ -70,23 +81,34 @@ class OrchestrateScamAnalysisUseCase {
 
     final isOnline = await _connectivityService.isOnline();
     if (!isOnline) {
+      PipelineLog.info(_stage, 'offline; routing to on-device path');
       return _analyzeOffline(input: input, trimmed: trimmed);
     }
 
     final kind = input.kind == SoarInputKind.eml && input.emlRawContent != null
         ? SoarInputKind.eml
         : InputClassifier.classify(trimmed);
+    PipelineLog.info('CLASSIFY', 'input kind=${kind.name}');
 
     EmailAuthAlignment? emailAuth;
     var contentForAnalysis = trimmed;
 
     if (kind == SoarInputKind.eml) {
+      PipelineLog.start('EML_PARSE');
       final emlRaw = input.emlRawContent ?? trimmed;
       final parsed = _safeParseEml(emlRaw);
       emailAuth = parsed?.emailAuth;
       contentForAnalysis = (parsed != null && parsed.bodyPreview.isNotEmpty)
           ? parsed.bodyPreview
           : emlRaw;
+      PipelineLog.done(
+        'EML_PARSE',
+        message: parsed != null ? 'parsed OK' : 'falling back to raw text',
+        context: {
+          'bodyChars': contentForAnalysis.length,
+          'hasAuth': emailAuth != null,
+        },
+      );
     }
 
     final scrubbed = input.incognitoEnabled
@@ -96,9 +118,15 @@ class OrchestrateScamAnalysisUseCase {
     final skipOsint = input.incognitoEnabled && kind == SoarInputKind.plainText;
 
     final targets = OsintTargetExtractor.extract(contentForAnalysis);
+    PipelineLog.info(
+      _stage,
+      'OSINT targets extracted',
+      context: {'url': targets.primaryUrl, 'ip': targets.primaryIp},
+    );
     ThreatIntelSnapshot intel;
 
     if (skipOsint) {
+      PipelineLog.info(_stage, 'OSINT skipped (incognito + plain text)');
       intel = ThreatIntelSnapshot(
         emailAuth: emailAuth,
         osintSkippedDueToIncognito: true,
@@ -111,13 +139,29 @@ class OrchestrateScamAnalysisUseCase {
       );
     }
 
+    PipelineLog.start('PROMPT');
     final masterPrompt = _buildAugmentedPromptUseCase(
       scrubbedInput: scrubbed,
       intel: intel,
     );
+    PipelineLog.done(
+      'PROMPT',
+      message: 'augmented master prompt assembled',
+      context: {'promptChars': masterPrompt.length},
+    );
 
     try {
-      return await _scamAnalysisRepository.analyzeAugmentedPrompt(masterPrompt);
+      final analysis =
+          await _scamAnalysisRepository.analyzeAugmentedPrompt(masterPrompt);
+      PipelineLog.done(
+        _stage,
+        message: 'cloud verdict returned',
+        context: {
+          'riskLevel': analysis.riskLevel.label,
+          'confidence': analysis.confidence,
+        },
+      );
+      return analysis;
     } on GeminiDataSourceException catch (cloudError, cloudStack) {
       developer.log(
         'Cloud analysis exhausted; attempting on-device fallback.',
@@ -125,10 +169,20 @@ class OrchestrateScamAnalysisUseCase {
         error: cloudError,
         stackTrace: cloudStack,
       );
+      PipelineLog.warn(
+        _stage,
+        'cloud exhausted; trying on-device fallback',
+        error: cloudError,
+      );
       final localResult = await _tryLocalFallback(scrubbed);
       if (localResult != null) {
+        PipelineLog.done(
+          _stage,
+          message: 'served by on-device fallback after cloud failure',
+        );
         return localResult.copyWith(cloudFallback: true);
       }
+      PipelineLog.failure(_stage, cloudError, stackTrace: cloudStack);
       throw const AnalyzeMessageException(
         'Analysis is currently unavailable. Please try again in a moment.',
       );
@@ -159,6 +213,10 @@ class OrchestrateScamAnalysisUseCase {
 
     final modelReady = await _modelDownloadService.isModelDownloaded();
     if (!modelReady) {
+      PipelineLog.warn(
+        _stage,
+        'offline and on-device model not downloaded',
+      );
       return const ScamAnalysis(
         riskLevel: RiskLevel.safe,
         confidence: 0,
@@ -168,7 +226,16 @@ class OrchestrateScamAnalysisUseCase {
     }
 
     try {
-      return await _localScamAnalysisService.analyze(scrubbed);
+      final result = await _localScamAnalysisService.analyze(scrubbed);
+      PipelineLog.done(
+        _stage,
+        message: 'offline verdict returned',
+        context: {
+          'riskLevel': result.riskLevel.label,
+          'confidence': result.confidence,
+        },
+      );
+      return result;
     } on LocalScamAnalysisException catch (e, stack) {
       // Offline + model is on disk but analysis still failed (parse error,
       // OOM, native crash, etc.). Surface a graceful flagged result instead
@@ -179,6 +246,7 @@ class OrchestrateScamAnalysisUseCase {
         error: e,
         stackTrace: stack,
       );
+      PipelineLog.failure(_stage, e, stackTrace: stack);
       return const ScamAnalysis(
         riskLevel: RiskLevel.safe,
         confidence: 0,

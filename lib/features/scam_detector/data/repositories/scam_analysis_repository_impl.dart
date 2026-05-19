@@ -1,5 +1,4 @@
-import 'dart:developer' as developer;
-
+import 'package:scam_message_detector/core/logging/pipeline_log.dart';
 import 'package:scam_message_detector/features/scam_detector/data/datasources/gemini_remote_datasource.dart';
 import 'package:scam_message_detector/features/scam_detector/data/datasources/groq_remote_datasource.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/scam_analysis.dart';
@@ -16,56 +15,59 @@ class ScamAnalysisRepositoryImpl implements ScamAnalysisRepository {
   })  : _groq = groqRemoteDataSource,
         _gemini = geminiRemoteDataSource;
 
+  static const _stage = 'CLOUD_CASCADE';
+
   final GroqRemoteDataSource _groq;
   final GeminiRemoteDataSource _gemini;
 
   @override
-  Future<ScamAnalysis> analyzeMessage(String message) async {
-    if (_groq.isConfigured) {
-      try {
-        final dto = await _groq.analyzeMessage(message);
-        return dto.toEntity();
-      } on GroqDataSourceException catch (e) {
-        _logGroqFallthrough(e);
-      }
-    }
-    try {
-      final dto = await _gemini.analyzeMessage(message);
-      return dto.toEntity();
-    } on GeminiDataSourceException {
-      rethrow;
-    } catch (e) {
-      throw GeminiDataSourceException(e.toString());
-    }
+  Future<ScamAnalysis> analyzeMessage(String message) {
+    return _runCascade(
+      groqCall: () => _groq.analyzeMessage(message),
+      geminiCall: () => _gemini.analyzeMessage(message),
+    );
   }
 
   @override
-  Future<ScamAnalysis> analyzeAugmentedPrompt(String masterPrompt) async {
+  Future<ScamAnalysis> analyzeAugmentedPrompt(String masterPrompt) {
+    return _runCascade(
+      groqCall: () => _groq.analyzeAugmentedContent(masterPrompt),
+      geminiCall: () => _gemini.analyzeAugmentedContent(masterPrompt),
+    );
+  }
+
+  Future<ScamAnalysis> _runCascade({
+    required Future<dynamic> Function() groqCall,
+    required Future<dynamic> Function() geminiCall,
+  }) async {
+    PipelineLog.start(_stage, context: {'groqConfigured': _groq.isConfigured});
+
     if (_groq.isConfigured) {
       try {
-        final dto = await _groq.analyzeAugmentedContent(masterPrompt);
-        return dto.toEntity();
+        PipelineLog.info(_stage, 'trying Groq');
+        final dto = await groqCall();
+        PipelineLog.done(_stage, message: 'served by Groq');
+        return (dto as dynamic).toEntity() as ScamAnalysis;
       } on GroqDataSourceException catch (e) {
-        _logGroqFallthrough(e);
+        PipelineLog.warn(
+          _stage,
+          e.rateLimited
+              ? 'Groq quota hit; falling back to Gemini'
+              : 'Groq failed; falling back to Gemini',
+          context: {'rateLimited': e.rateLimited},
+          error: e,
+        );
       }
     }
     try {
-      final dto = await _gemini.analyzeAugmentedContent(masterPrompt);
-      return dto.toEntity();
+      PipelineLog.info(_stage, 'trying Gemini');
+      final dto = await geminiCall();
+      PipelineLog.done(_stage, message: 'served by Gemini');
+      return (dto as dynamic).toEntity() as ScamAnalysis;
     } on GeminiDataSourceException {
       rethrow;
     } catch (e) {
       throw GeminiDataSourceException(e.toString());
     }
-  }
-
-  void _logGroqFallthrough(GroqDataSourceException e) {
-    developer.log(
-      e.rateLimited
-          ? 'Groq quota hit; falling back to Gemini.'
-          : 'Groq failed; falling back to Gemini.',
-      name: 'ScamAnalysisRepositoryImpl',
-      error: e,
-    );
   }
 }

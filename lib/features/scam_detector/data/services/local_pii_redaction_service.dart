@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:flutter_llama/flutter_llama.dart';
+import 'package:scam_message_detector/core/logging/pipeline_log.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/llama_native_probe.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/model_download_service.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/pii_redaction_repository.dart';
@@ -32,26 +33,34 @@ class LocalPiiRedactionService implements PiiRedactionRepository {
   bool _modelLoaded = false;
   String? _loadedFromPath;
 
+  static const _stage = 'PII';
+
   @override
   Future<String> scrubPii(String input) async {
+    PipelineLog.start(_stage, context: {'inputChars': input.length});
     if (!await _modelDownload.isModelDownloaded()) {
-      developer.log(
-        'Local model not downloaded; using regex PII fallback.',
-        name: 'LocalPiiRedactionService',
+      PipelineLog.info(
+        _stage,
+        'on-device model not downloaded; using regex fallback',
       );
-      return _regexFallback(input);
+      final out = _regexFallback(input);
+      PipelineLog.done(_stage, message: 'regex fallback applied');
+      return out;
     }
     if (!await _nativeProbe.isAvailable()) {
-      developer.log(
-        'Llama native libraries unavailable; using regex PII fallback.',
-        name: 'LocalPiiRedactionService',
+      PipelineLog.info(
+        _stage,
+        'llama native libs unavailable; using regex fallback',
       );
-      return _regexFallback(input);
+      final out = _regexFallback(input);
+      PipelineLog.done(_stage, message: 'regex fallback applied');
+      return out;
     }
 
     try {
       final modelPath = await _modelDownload.getModelPath();
       await _ensureModelLoaded(modelPath);
+      PipelineLog.info(_stage, 'invoking on-device LLM for PII scrub');
 
       final params = GenerationParams(
         prompt: '$_piiSystemPrompt\n\n$input',
@@ -67,8 +76,14 @@ class LocalPiiRedactionService implements PiiRedactionRepository {
       final response = await _llama.generate(params).timeout(_generateTimeout);
       final scrubbed = response.text.trim();
       if (scrubbed.isEmpty) {
+        PipelineLog.warn(_stage, 'empty LLM scrub; reverting to regex');
         return _regexFallback(input);
       }
+      PipelineLog.done(
+        _stage,
+        message: 'LLM scrub complete',
+        context: {'outputChars': scrubbed.length},
+      );
       return scrubbed;
     } on Object catch (e, stack) {
       developer.log(
@@ -76,6 +91,11 @@ class LocalPiiRedactionService implements PiiRedactionRepository {
         name: 'LocalPiiRedactionService',
         error: e,
         stackTrace: stack,
+      );
+      PipelineLog.warn(
+        _stage,
+        'LLM scrub failed; falling back to regex',
+        error: e,
       );
       _modelLoaded = false;
       _loadedFromPath = null;

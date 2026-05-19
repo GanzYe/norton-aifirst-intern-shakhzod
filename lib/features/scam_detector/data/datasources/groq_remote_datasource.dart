@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'dart:developer' as developer;
 
 import 'package:dio/dio.dart';
+import 'package:scam_message_detector/core/logging/pipeline_log.dart';
 import 'package:scam_message_detector/features/scam_detector/data/dtos/scam_analysis_dto.dart';
 
 /// Primary cloud analysis path. Uses Groq's OpenAI-compatible Chat
@@ -12,6 +12,7 @@ class GroqRemoteDataSource {
       : _dio = dio,
         _apiKey = apiKey;
 
+  static const _stage = 'GROQ';
   static const _model = 'llama-3.3-70b-versatile';
   static const _systemPrompt = '''
 You are a cybersecurity expert analyzing messages for scam, phishing, and fraud risk.
@@ -39,14 +40,26 @@ Rules:
   }
 
   Future<ScamAnalysisDto> _generate(String userPrompt) async {
+    PipelineLog.start(
+      _stage,
+      context: {
+        'model': _model,
+        'promptChars': userPrompt.length,
+        'configured': isConfigured,
+      },
+    );
+
     if (!isConfigured) {
-      throw const GroqDataSourceException(
+      const exc = GroqDataSourceException(
         'Missing GROQ_API_KEY. Skipping Groq path.',
         rateLimited: false,
       );
+      PipelineLog.warn(_stage, 'no API key configured', error: exc);
+      throw exc;
     }
 
     try {
+      PipelineLog.info(_stage, 'POST /openai/v1/chat/completions');
       final response = await _dio.post<Map<String, dynamic>>(
         '/openai/v1/chat/completions',
         options: Options(
@@ -71,51 +84,84 @@ Rules:
       final data = response.data;
 
       if (status == 429 || status == 402) {
-        throw const GroqDataSourceException(
+        const exc = GroqDataSourceException(
           'Groq quota exhausted.',
           rateLimited: true,
         );
+        PipelineLog.warn(
+          _stage,
+          'rate-limited; caller should fall back',
+          context: {'status': status},
+          error: exc,
+        );
+        throw exc;
       }
       if (status >= 400 || data == null) {
-        throw GroqDataSourceException(
+        final exc = GroqDataSourceException(
           'Groq error ($status): ${_extractError(data)}',
           rateLimited: false,
         );
+        PipelineLog.failure(_stage, exc, context: {'status': status});
+        throw exc;
       }
 
       final text = _extractContent(data);
       if (text == null || text.trim().isEmpty) {
-        throw const GroqDataSourceException(
+        const exc = GroqDataSourceException(
           'Empty response from Groq.',
           rateLimited: false,
         );
+        PipelineLog.failure(_stage, exc);
+        throw exc;
       }
 
       final decoded = jsonDecode(text);
       if (decoded is! Map<String, dynamic>) {
         throw const FormatException('Expected JSON object');
       }
-      return ScamAnalysisDto.fromJson(decoded);
+      final dto = ScamAnalysisDto.fromJson(decoded);
+      PipelineLog.done(
+        _stage,
+        message: 'verdict received',
+        context: {
+          'status': status,
+          'riskLevel': dto.riskLevel,
+          'confidence': dto.confidence,
+        },
+      );
+      return dto;
     } on GroqDataSourceException {
       rethrow;
     } on DioException catch (e, stack) {
-      developer.log(
-        'Groq API error',
-        name: 'GroqRemoteDataSource',
-        error: e,
-        stackTrace: stack,
-      );
       final rateLimited = e.response?.statusCode == 429 ||
           e.response?.statusCode == 402;
-      throw GroqDataSourceException(
+      final exc = GroqDataSourceException(
         e.message ?? 'Groq request failed.',
         rateLimited: rateLimited,
       );
+      if (rateLimited) {
+        PipelineLog.warn(
+          _stage,
+          'network rate-limit; falling back',
+          context: {'status': e.response?.statusCode},
+          error: exc,
+        );
+      } else {
+        PipelineLog.failure(
+          _stage,
+          exc,
+          stackTrace: stack,
+          context: {'status': e.response?.statusCode},
+        );
+      }
+      throw exc;
     } on FormatException catch (e) {
-      throw GroqDataSourceException(
+      final exc = GroqDataSourceException(
         'Could not parse Groq response: ${e.message}',
         rateLimited: false,
       );
+      PipelineLog.failure(_stage, exc);
+      throw exc;
     }
   }
 

@@ -1,15 +1,20 @@
 import 'package:dio/dio.dart';
+import 'package:scam_message_detector/core/logging/pipeline_log.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/threat_intel_snapshot.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/virus_total_repository.dart';
 
 class VirusTotalRepositoryImpl implements VirusTotalRepository {
   VirusTotalRepositoryImpl(this._dio);
 
+  static const _stage = 'OSINT.VT';
+
   final Dio _dio;
 
   @override
   Future<VirusTotalResult> scanUrl(String url) async {
+    PipelineLog.start(_stage, context: {'url': url});
     try {
+      PipelineLog.info(_stage, 'POST /urls (submit for analysis)');
       final submitResponse = await _dio.post<Map<String, dynamic>>(
         '/urls',
         data: {'url': url},
@@ -20,18 +25,27 @@ class VirusTotalRepositoryImpl implements VirusTotalRepository {
 
       final submitStatus = submitResponse.statusCode;
       if (submitStatus == null || submitStatus < 200 || submitStatus >= 300) {
-        throw VirusTotalRepositoryException(
+        final exc = VirusTotalRepositoryException(
           _messageFromBody(submitResponse.data, 'URL submission failed.'),
           statusCode: submitStatus,
         );
+        PipelineLog.failure(_stage, exc, context: {'status': submitStatus});
+        throw exc;
       }
 
       final analysisId = _extractAnalysisId(submitResponse.data);
       if (analysisId == null || analysisId.isEmpty) {
-        throw const VirusTotalRepositoryException(
+        const exc = VirusTotalRepositoryException(
           'VirusTotal response missing analysis id.',
         );
+        PipelineLog.failure(_stage, exc);
+        throw exc;
       }
+      PipelineLog.info(
+        _stage,
+        'submission accepted, fetching report',
+        context: {'analysisId': analysisId},
+      );
 
       final reportResponse = await _dio.get<Map<String, dynamic>>(
         '/urls/$analysisId',
@@ -39,10 +53,12 @@ class VirusTotalRepositoryImpl implements VirusTotalRepository {
 
       final reportStatus = reportResponse.statusCode;
       if (reportStatus == null || reportStatus < 200 || reportStatus >= 300) {
-        throw VirusTotalRepositoryException(
+        final exc = VirusTotalRepositoryException(
           _messageFromBody(reportResponse.data, 'URL report fetch failed.'),
           statusCode: reportStatus,
         );
+        PipelineLog.failure(_stage, exc, context: {'status': reportStatus});
+        throw exc;
       }
 
       final stats = reportResponse.data?['data']?['attributes']?['last_analysis_stats']
@@ -54,16 +70,32 @@ class VirusTotalRepositoryImpl implements VirusTotalRepository {
               .fold<int>(0, (sum, value) => sum + value.toInt()) ??
           0;
 
-      return VirusTotalResult(
+      final result = VirusTotalResult(
         url: url,
         maliciousCount: malicious,
         totalEngines: total,
       );
-    } on DioException catch (e) {
-      throw VirusTotalRepositoryException(
+      PipelineLog.done(
+        _stage,
+        message: 'verdict received',
+        context: {
+          'malicious': malicious,
+          'totalEngines': total,
+        },
+      );
+      return result;
+    } on DioException catch (e, stack) {
+      final exc = VirusTotalRepositoryException(
         e.message ?? 'VirusTotal network error.',
         statusCode: e.response?.statusCode,
       );
+      PipelineLog.failure(
+        _stage,
+        exc,
+        stackTrace: stack,
+        context: {'status': e.response?.statusCode},
+      );
+      throw exc;
     }
   }
 

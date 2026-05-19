@@ -1,0 +1,129 @@
+import 'dart:developer' as developer;
+
+/// Centralized, stage-aware logger for the SOAR scam-detection pipeline.
+///
+/// Every service in the analysis pipeline emits trace events through this
+/// helper so a single `dart:developer` log scope (`PipelineLog`) lets you
+/// follow a request end-to-end:
+///
+///   1. CONNECTIVITY        – online/offline routing decision
+///   2. CLASSIFY            – input kind (text / url / ip / eml)
+///   3. EML_PARSE           – MIME parse + Authentication-Results
+///   4. PII                 – on-device LLM scrub (or regex fallback)
+///   5. OSINT.VT            – VirusTotal URL reputation
+///   6. OSINT.AbuseIPDB     – IP reputation
+///   7. OSINT.URLScan       – urlscan.io submission
+///   8. PROMPT              – augmented master-prompt assembly
+///   9. GROQ                – primary cloud LLM (llama-3.3-70b-versatile)
+///  10. GEMINI              – fallback cloud LLM (gemini-2.5-flash-lite)
+///  11. LLAMA_LOCAL         – on-device Qwen2-0.5B fallback
+///  12. ORCHESTRATOR        – top-level pipeline events
+///
+/// Each entry is rendered as:
+///   `[TAG] STAGE • message | k1=v1, k2=v2`
+///
+/// where TAG is one of START / DONE / INFO / WARN / FAIL.
+abstract final class PipelineLog {
+  static const _name = 'PipelineLog';
+
+  /// Pipeline stage entered. Pair with [done] or [failure].
+  static void start(String stage, {Map<String, Object?>? context}) {
+    _emit('START', stage, context: context);
+  }
+
+  /// A status update inside a stage (e.g. "calling VirusTotal /urls").
+  static void info(
+    String stage,
+    String message, {
+    Map<String, Object?>? context,
+  }) {
+    _emit('INFO', stage, message: message, context: context);
+  }
+
+  /// Stage completed successfully.
+  static void done(
+    String stage, {
+    String? message,
+    Map<String, Object?>? context,
+  }) {
+    _emit('DONE', stage, message: message, context: context);
+  }
+
+  /// Non-fatal anomaly (e.g. cloud rate-limit triggering fallback).
+  static void warn(
+    String stage,
+    String message, {
+    Map<String, Object?>? context,
+    Object? error,
+  }) {
+    _emit(
+      'WARN',
+      stage,
+      message: message,
+      context: context,
+      error: error,
+      level: 900,
+    );
+  }
+
+  /// Stage failed. Caller decides whether to propagate or fall back.
+  static void failure(
+    String stage,
+    Object error, {
+    StackTrace? stackTrace,
+    String? message,
+    Map<String, Object?>? context,
+  }) {
+    _emit(
+      'FAIL',
+      stage,
+      message: message,
+      context: context,
+      error: error,
+      stackTrace: stackTrace,
+      level: 1000,
+    );
+  }
+
+  static void _emit(
+    String tag,
+    String stage, {
+    String? message,
+    Map<String, Object?>? context,
+    Object? error,
+    StackTrace? stackTrace,
+    int level = 800,
+  }) {
+    final buf = StringBuffer()
+      ..write('[')
+      ..write(tag)
+      ..write('] ')
+      ..write(stage);
+    if (message != null && message.isNotEmpty) {
+      buf
+        ..write(' • ')
+        ..write(message);
+    }
+    if (context != null && context.isNotEmpty) {
+      buf
+        ..write(' | ')
+        ..write(
+          context.entries.map((e) => '${e.key}=${_fmt(e.value)}').join(', '),
+        );
+    }
+    developer.log(
+      buf.toString(),
+      name: _name,
+      error: error,
+      stackTrace: stackTrace,
+      level: level,
+    );
+  }
+
+  static String _fmt(Object? value) {
+    if (value == null) return 'null';
+    final s = value.toString();
+    if (s.length > 120) return '${s.substring(0, 117)}...';
+    return s;
+  }
+}
