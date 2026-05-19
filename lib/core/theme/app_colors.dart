@@ -18,6 +18,13 @@ abstract final class AppColors {
   static const double opacityBorderMuted = 0.4;
   static const double opacityIconMuted = 0.8;
   static const double opacityRiskFill = 0.15;
+  static const double opacityWarningFill = 0.14;
+
+  static Color get warningBackground =>
+      nortonYellow.withValues(alpha: opacityWarningFill);
+
+  static Color get errorBackground =>
+      dangerousRed.withValues(alpha: opacityRiskFill);
   static const double opacityRiskTrack = 0.2;
 
   static Color get hintMuted => textMuted.withValues(alpha: opacityHint);
