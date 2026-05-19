@@ -20,11 +20,28 @@ Flutter app that analyzes suspicious SMS, email snippets, or URLs using the Goog
    dart run build_runner build --delete-conflicting-outputs
    ```
 
-4. Run the app:
+4. **Android only:** `flutter_llama` on pub.dev does not ship `llama.cpp` and its default Vulkan Android build fails when cross-compiling. Run once after `pub get` (clones sources and applies CPU-only patches):
+
+   ```powershell
+   # Windows
+   .\tool\setup_flutter_llama.ps1
+   ```
+
+   ```bash
+   # macOS / Linux
+   chmod +x tool/setup_flutter_llama.sh
+   ./tool/setup_flutter_llama.sh
+   ```
+
+   Re-run this script after upgrading `flutter_llama` or clearing the pub cache.
+
+5. Run the app:
 
    ```bash
    flutter run
    ```
+
+   If Android build fails with Kotlin cache errors (project on `E:` and pub cache on `C:`), `android/gradle.properties` already sets `kotlin.incremental=false`. If CMake errors persist, run `flutter clean`, re-run the setup script, then build again.
 
 ## Architecture
 
