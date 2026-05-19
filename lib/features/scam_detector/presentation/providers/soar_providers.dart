@@ -6,7 +6,9 @@ import 'package:scam_message_detector/features/scam_detector/data/repositories/a
 import 'package:scam_message_detector/features/scam_detector/data/repositories/eml_parse_repository_impl.dart';
 import 'package:scam_message_detector/features/scam_detector/data/repositories/url_scan_repository_impl.dart';
 import 'package:scam_message_detector/features/scam_detector/data/repositories/virus_total_repository_impl.dart';
+import 'package:scam_message_detector/features/scam_detector/data/services/connectivity_service.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/local_pii_redaction_service.dart';
+import 'package:scam_message_detector/features/scam_detector/data/services/local_scam_analysis_service.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/abuse_ipdb_repository.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/providers/incognito_mode_provider.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/eml_parse_repository.dart';
@@ -46,6 +48,23 @@ EmlParseRepository emlParseRepository(EmlParseRepositoryRef ref) {
 }
 
 @Riverpod(keepAlive: true)
+ConnectivityService connectivityService(ConnectivityServiceRef ref) {
+  return ConnectivityService();
+}
+
+@Riverpod(keepAlive: true)
+LocalScamAnalysisService localScamAnalysisService(
+  LocalScamAnalysisServiceRef ref,
+) {
+  final modelPathAsync = ref.watch(modelPathProvider);
+  final path = modelPathAsync.valueOrNull ?? '';
+  return LocalScamAnalysisService(
+    llama: FlutterLlama.instance,
+    modelPath: path,
+  );
+}
+
+@Riverpod(keepAlive: true)
 PiiRedactionRepository piiRedactionRepository(PiiRedactionRepositoryRef ref) {
   final modelPathAsync = ref.watch(modelPathProvider);
   final path = modelPathAsync.valueOrNull ?? '';
@@ -74,5 +93,8 @@ OrchestrateScamAnalysisUseCase orchestrateScamAnalysisUseCase(
     urlScanRepository: ref.watch(urlScanRepositoryProvider),
     emlParseRepository: ref.watch(emlParseRepositoryProvider),
     buildAugmentedPromptUseCase: ref.watch(buildAugmentedPromptUseCaseProvider),
+    connectivityService: ref.watch(connectivityServiceProvider),
+    localScamAnalysisService: ref.watch(localScamAnalysisServiceProvider),
+    modelDownloadService: ref.watch(modelDownloadServiceProvider),
   );
 }

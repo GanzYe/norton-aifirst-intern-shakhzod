@@ -77,6 +77,43 @@ final emlParseRepositoryProvider = Provider<EmlParseRepository>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef EmlParseRepositoryRef = ProviderRef<EmlParseRepository>;
+String _$connectivityServiceHash() =>
+    r'7d8643f65cf5ec40a8aab54860bd76686712274d';
+
+/// See also [connectivityService].
+@ProviderFor(connectivityService)
+final connectivityServiceProvider = Provider<ConnectivityService>.internal(
+  connectivityService,
+  name: r'connectivityServiceProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$connectivityServiceHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef ConnectivityServiceRef = ProviderRef<ConnectivityService>;
+String _$localScamAnalysisServiceHash() =>
+    r'067eb74b4e85e3993e5bc71bc7c3dde6476709a9';
+
+/// See also [localScamAnalysisService].
+@ProviderFor(localScamAnalysisService)
+final localScamAnalysisServiceProvider =
+    Provider<LocalScamAnalysisService>.internal(
+      localScamAnalysisService,
+      name: r'localScamAnalysisServiceProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$localScamAnalysisServiceHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef LocalScamAnalysisServiceRef = ProviderRef<LocalScamAnalysisService>;
 String _$piiRedactionRepositoryHash() =>
     r'd0ae9ab34293b859c161586d5f77bfeaf8d0180a';
 
@@ -117,7 +154,7 @@ final buildAugmentedPromptUseCaseProvider =
 typedef BuildAugmentedPromptUseCaseRef =
     ProviderRef<BuildAugmentedPromptUseCase>;
 String _$orchestrateScamAnalysisUseCaseHash() =>
-    r'40c8ab5263f4a7dcc5fca23148089cc36d542500';
+    r'1e2d41e79dc1ca7031c017407fa4265f0ba2ee87';
 
 /// See also [orchestrateScamAnalysisUseCase].
 @ProviderFor(orchestrateScamAnalysisUseCase)
