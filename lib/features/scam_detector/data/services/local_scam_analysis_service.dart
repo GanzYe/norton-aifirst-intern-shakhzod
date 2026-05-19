@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
 
 import 'package:flutter_llama/flutter_llama.dart';
 import 'package:scam_message_detector/features/scam_detector/data/dtos/scam_analysis_dto.dart';
+import 'package:scam_message_detector/features/scam_detector/data/services/llama_native_probe.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/model_download_service.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/scam_analysis.dart';
 
@@ -27,29 +29,43 @@ class LocalScamAnalysisException implements Exception {
 
 /// On-device scam verdict via flutter_llama (offline analysis path).
 ///
-/// The model path is resolved lazily from [ModelDownloadService] at each
-/// [analyze] call so newly downloaded models become usable without a
-/// provider rebuild race.
+/// Path is resolved lazily from [ModelDownloadService] at each call, and a
+/// native-health probe gates any call into the buggy `flutter_llama` 1.1.2
+/// plugin to avoid `UnsatisfiedLinkError` crashes on devices without the
+/// expected `.so` files.
 class LocalScamAnalysisService {
   LocalScamAnalysisService({
     required FlutterLlama llama,
     required ModelDownloadService modelDownloadService,
+    required LlamaNativeProbe nativeProbe,
   })  : _llama = llama,
-        _modelDownload = modelDownloadService;
+        _modelDownload = modelDownloadService,
+        _nativeProbe = nativeProbe;
+
+  static const _loadTimeout = Duration(seconds: 45);
+  static const _generateTimeout = Duration(minutes: 2);
 
   final FlutterLlama _llama;
   final ModelDownloadService _modelDownload;
+  final LlamaNativeProbe _nativeProbe;
 
   bool _modelLoaded = false;
   String? _loadedFromPath;
 
-  /// True when a .gguf model file exists on device.
-  Future<bool> isModelAvailable() => _modelDownload.isModelDownloaded();
+  Future<bool> isUsable() async {
+    if (!await _modelDownload.isModelDownloaded()) return false;
+    return _nativeProbe.isAvailable();
+  }
 
   Future<ScamAnalysis> analyze(String message) async {
     if (!await _modelDownload.isModelDownloaded()) {
       throw const LocalScamAnalysisException(
         'Local model is not downloaded.',
+      );
+    }
+    if (!await _nativeProbe.isAvailable()) {
+      throw const LocalScamAnalysisException(
+        'On-device AI engine is not available on this device.',
       );
     }
 
@@ -67,9 +83,10 @@ class LocalScamAnalysisService {
         repeatPenalty: 1.1,
       );
 
-      // Non-streaming generate() avoids the EventChannel race condition in
-      // flutter_llama 1.1.2 (NO_EVENT_SINK).
-      final response = await _llama.generate(params);
+      // Non-streaming generate() avoids the EventChannel race in
+      // flutter_llama 1.1.2 (NO_EVENT_SINK). Timeout guards against the
+      // native worker dying silently mid-flight.
+      final response = await _llama.generate(params).timeout(_generateTimeout);
       final raw = response.text.trim();
       if (raw.isEmpty) {
         throw const LocalScamAnalysisException(
@@ -79,7 +96,19 @@ class LocalScamAnalysisService {
 
       return _parseResponse(raw).copyWith(resolvedLocally: true);
     } on LocalScamAnalysisException {
+      _resetLoadState();
       rethrow;
+    } on TimeoutException catch (e, stack) {
+      developer.log(
+        'Local model inference timed out',
+        name: 'LocalScamAnalysisService',
+        error: e,
+        stackTrace: stack,
+      );
+      _resetLoadState();
+      throw const LocalScamAnalysisException(
+        'On-device analysis took too long. Please try again.',
+      );
     } on Object catch (e, stack) {
       developer.log(
         'Local scam analysis failed',
@@ -87,11 +116,10 @@ class LocalScamAnalysisService {
         error: e,
         stackTrace: stack,
       );
-      // A failed decode (e.g. native ggml_abort) can leave the underlying
-      // context in a broken state; force a fresh load on the next attempt.
-      _modelLoaded = false;
-      _loadedFromPath = null;
-      throw LocalScamAnalysisException('Local analysis failed: $e');
+      _resetLoadState();
+      throw const LocalScamAnalysisException(
+        "Couldn't run on-device analysis. Please try again.",
+      );
     }
   }
 
@@ -100,26 +128,31 @@ class LocalScamAnalysisService {
       return;
     }
 
-    // CPU-only inference. Some Android GPUs (Vulkan/OpenCL backends used by
-    // llama.cpp) trigger SIGABRT inside ggml during decode when off-loading
-    // all layers; falling back to CPU is a small Qwen-0.5B model and runs
-    // comfortably without GPU acceleration.
-    final loaded = await _llama.loadModel(
-      LlamaConfig(
-        modelPath: modelPath,
-        nThreads: 4,
-        nGpuLayers: 0,
-        contextSize: 2048,
-        batchSize: 256,
-        useGpu: false,
-        verbose: false,
-      ),
-    );
+    // CPU-only inference. flutter_llama's Vulkan/OpenCL backends trigger
+    // ggml_abort during decode on a number of Android devices.
+    final loaded = await _llama
+        .loadModel(
+          LlamaConfig(
+            modelPath: modelPath,
+            nThreads: 4,
+            nGpuLayers: 0,
+            contextSize: 2048,
+            batchSize: 256,
+            useGpu: false,
+            verbose: false,
+          ),
+        )
+        .timeout(_loadTimeout);
     if (!loaded) {
       throw const LocalScamAnalysisException('Failed to load local model.');
     }
     _modelLoaded = true;
     _loadedFromPath = modelPath;
+  }
+
+  void _resetLoadState() {
+    _modelLoaded = false;
+    _loadedFromPath = null;
   }
 
   ScamAnalysis _parseResponse(String raw) {
@@ -130,9 +163,15 @@ class LocalScamAnalysisService {
         throw const FormatException('Expected JSON object');
       }
       return ScamAnalysisDto.fromJson(decoded).toEntity();
-    } on Object catch (e) {
-      throw LocalScamAnalysisException(
-        'Could not parse local model response: $e',
+    } on Object catch (e, stack) {
+      developer.log(
+        'Could not parse local model response',
+        name: 'LocalScamAnalysisService',
+        error: e,
+        stackTrace: stack,
+      );
+      throw const LocalScamAnalysisException(
+        "Couldn't read the on-device model response.",
       );
     }
   }

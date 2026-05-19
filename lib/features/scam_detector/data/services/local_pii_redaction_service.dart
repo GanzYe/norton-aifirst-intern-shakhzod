@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:flutter_llama/flutter_llama.dart';
+import 'package:scam_message_detector/features/scam_detector/data/services/llama_native_probe.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/model_download_service.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/pii_redaction_repository.dart';
 
@@ -8,17 +10,24 @@ const _piiSystemPrompt =
     'Redact all PII from the following text, replacing it with [REDACTED]. '
     'Return only the scrubbed text without any additional commentary.';
 
-/// On-device PII scrubbing via flutter_llama; regex fallback when the model
-/// is unavailable or inference fails.
+/// On-device PII scrubbing via flutter_llama with a regex fallback. The
+/// regex path is always used when the native engine isn't loadable or the
+/// model isn't on disk, so this method never bubbles a failure upward.
 class LocalPiiRedactionService implements PiiRedactionRepository {
   LocalPiiRedactionService({
     required FlutterLlama llama,
     required ModelDownloadService modelDownloadService,
+    required LlamaNativeProbe nativeProbe,
   })  : _llama = llama,
-        _modelDownload = modelDownloadService;
+        _modelDownload = modelDownloadService,
+        _nativeProbe = nativeProbe;
+
+  static const _loadTimeout = Duration(seconds: 45);
+  static const _generateTimeout = Duration(minutes: 1);
 
   final FlutterLlama _llama;
   final ModelDownloadService _modelDownload;
+  final LlamaNativeProbe _nativeProbe;
 
   bool _modelLoaded = false;
   String? _loadedFromPath;
@@ -28,6 +37,13 @@ class LocalPiiRedactionService implements PiiRedactionRepository {
     if (!await _modelDownload.isModelDownloaded()) {
       developer.log(
         'Local model not downloaded; using regex PII fallback.',
+        name: 'LocalPiiRedactionService',
+      );
+      return _regexFallback(input);
+    }
+    if (!await _nativeProbe.isAvailable()) {
+      developer.log(
+        'Llama native libraries unavailable; using regex PII fallback.',
         name: 'LocalPiiRedactionService',
       );
       return _regexFallback(input);
@@ -46,9 +62,9 @@ class LocalPiiRedactionService implements PiiRedactionRepository {
         repeatPenalty: 1.1,
       );
 
-      // Non-streaming generate() sidesteps the flutter_llama 1.1.2
-      // EventChannel race (NO_EVENT_SINK).
-      final response = await _llama.generate(params);
+      // Non-streaming generate() avoids the flutter_llama 1.1.2 EventChannel
+      // race condition (NO_EVENT_SINK).
+      final response = await _llama.generate(params).timeout(_generateTimeout);
       final scrubbed = response.text.trim();
       if (scrubbed.isEmpty) {
         return _regexFallback(input);
@@ -61,8 +77,6 @@ class LocalPiiRedactionService implements PiiRedactionRepository {
         error: e,
         stackTrace: stack,
       );
-      // Native llama.cpp aborts can wedge the loaded context; reset so the
-      // next call re-initializes cleanly.
       _modelLoaded = false;
       _loadedFromPath = null;
       return _regexFallback(input);
@@ -74,8 +88,6 @@ class LocalPiiRedactionService implements PiiRedactionRepository {
       return;
     }
 
-    // CPU-only inference for the same reason as LocalScamAnalysisService:
-    // GPU off-load triggers ggml_abort on some Android devices.
     final config = LlamaConfig(
       modelPath: modelPath,
       nThreads: 4,
@@ -86,7 +98,7 @@ class LocalPiiRedactionService implements PiiRedactionRepository {
       verbose: false,
     );
 
-    final loaded = await _llama.loadModel(config);
+    final loaded = await _llama.loadModel(config).timeout(_loadTimeout);
     if (!loaded) {
       throw const PiiRedactionException('Failed to load local Llama model.');
     }
