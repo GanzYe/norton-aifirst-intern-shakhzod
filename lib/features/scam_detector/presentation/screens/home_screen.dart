@@ -1,19 +1,25 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:scam_message_detector/core/theme/app_decorations.dart';
+import 'package:scam_message_detector/core/theme/app_colors.dart';
 import 'package:scam_message_detector/core/theme/app_durations.dart';
 import 'package:scam_message_detector/core/theme/app_sizes.dart';
 import 'package:scam_message_detector/core/theme/app_spacing.dart';
 import 'package:scam_message_detector/core/theme/app_text_styles.dart';
+import 'package:scam_message_detector/core/theme/app_theme.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/scam_analysis.dart';
-import 'package:scam_message_detector/features/scam_detector/presentation/constants/example_messages.dart';
+import 'package:scam_message_detector/features/scam_detector/presentation/providers/device_online_provider.dart';
+import 'package:scam_message_detector/features/scam_detector/presentation/providers/incognito_mode_provider.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/providers/scam_analysis_controller.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/utils/friendly_error.dart';
-import 'package:scam_message_detector/features/scam_detector/presentation/widgets/analyze_button.dart';
+import 'package:scam_message_detector/features/scam_detector/presentation/widgets/analysis_loading_indicator.dart';
+import 'package:scam_message_detector/features/scam_detector/presentation/widgets/analysis_notes_section.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/app_modal_dialog.dart';
-import 'package:scam_message_detector/features/scam_detector/presentation/widgets/example_message_tile.dart';
+import 'package:scam_message_detector/features/scam_detector/presentation/widgets/example_samples_row.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/incognito_mode_switch.dart';
+import 'package:scam_message_detector/features/scam_detector/presentation/widgets/measure_size.dart';
+import 'package:scam_message_detector/features/scam_detector/presentation/widgets/message_field_shell.dart';
+import 'package:scam_message_detector/features/scam_detector/presentation/widgets/message_input_field.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/result_card.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/smd_logo.dart';
 
@@ -28,10 +34,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     with SingleTickerProviderStateMixin {
   final _messageController = TextEditingController();
   String? _attachedEmlRaw;
+  String? _attachedEmlName;
   late final AnimationController _resultAnimController;
   late final Animation<double> _fadeAnimation;
   late final Animation<Offset> _slideAnimation;
   ScamAnalysis? _lastShownAnalysis;
+  bool _inputFocused = false;
+  double _inputSlotHeight = AppSizes.inputFieldMinHeight;
 
   @override
   void initState() {
@@ -86,6 +95,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final raw = String.fromCharCodes(bytes);
     setState(() {
       _attachedEmlRaw = raw;
+      _attachedEmlName = file.name;
       _messageController.text = 'Attached EML: ${file.name}';
     });
     ref.read(scamAnalysisControllerProvider.notifier).reset();
@@ -94,12 +104,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   void _clearEmlAttachment() {
-    setState(() => _attachedEmlRaw = null);
+    setState(() {
+      _attachedEmlRaw = null;
+      _attachedEmlName = null;
+      if (_messageController.text.startsWith('Attached EML:')) {
+        _messageController.clear();
+      }
+    });
   }
 
   Widget? _buildAnalysisResult(ScamAnalysis analysis) {
-    // Failure states render nothing inline; a modal is shown via the
-    // controller listener instead.
     if (analysis.localModelUnavailable || analysis.localAnalysisFailed) {
       return null;
     }
@@ -157,7 +171,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   void _onExampleTap(String body) {
     _messageController.text = body;
-    _attachedEmlRaw = null;
+    setState(() {
+      _attachedEmlRaw = null;
+      _attachedEmlName = null;
+    });
     ref.read(scamAnalysisControllerProvider.notifier).reset();
     _resultAnimController.reset();
     setState(() => _lastShownAnalysis = null);
@@ -167,6 +184,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget build(BuildContext context) {
     final analysisState = ref.watch(scamAnalysisControllerProvider);
     final isLoading = analysisState.isLoading;
+    final incognito = ref.watch(incognitoModeControllerProvider);
+    final isOnline = ref.watch(deviceOnlineProvider).value ?? true;
+    final showContextNotes = incognito || !isOnline;
 
     ref.listen(scamAnalysisControllerProvider, (previous, next) {
       next.whenOrNull(
@@ -191,101 +211,130 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final analysis = analysisState.valueOrNull;
     final resultWidget =
         analysis != null ? _buildAnalysisResult(analysis) : null;
+    final muted = AppColors.resolveTextMuted(incognito: incognito);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const SmdLogo(size: AppSizes.logoAppBar),
-        centerTitle: false,
-      ),
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: AppSpacing.screenContent,
-              sliver: SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Scam Message Detector',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    const Text(
-                      'Paste a suspicious SMS, email, or URL below. '
-                      'Our AI will assess the scam risk instantly.',
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.homeSubtitle,
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    TextFormField(
-                      controller: _messageController,
-                      enabled: !isLoading,
-                      maxLines: null,
-                      minLines: 5,
-                      decoration: AppDecorations.inputField(
-                        hintText:
-                            'Enter a URL, message, email,'
-                            ' or snippet to check for scams.',
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    IncognitoModeSwitch(enabled: !isLoading),
-                    const SizedBox(height: AppSpacing.sm),
-                    Row(
-                      children: [
-                        OutlinedButton.icon(
-                          onPressed: isLoading ? null : _onPickEml,
-                          icon: const Icon(Icons.attach_email_outlined),
-                          label: const Text('Upload .eml'),
-                        ),
-                        if (_attachedEmlRaw != null) ...[
-                          const SizedBox(width: AppSpacing.sm),
-                          TextButton(
-                            onPressed: isLoading ? null : _clearEmlAttachment,
-                            child: const Text('Clear EML'),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    AnalyzeButton(isLoading: isLoading, onPressed: _onAnalyze),
-                    const SizedBox(height: AppSpacing.xl),
-                    const Text(
-                      'Try an example',
-                      style: AppTextStyles.sectionLabel,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    ...ExampleMessages.samples.map(
-                      (sample) => Padding(
-                        padding: AppSpacing.exampleItemBottom,
-                        child: ExampleMessageTile(
-                          title: sample.title,
-                          onTap: () => _onExampleTap(sample.body),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            if (resultWidget != null)
+    return Theme(
+      data: AppTheme.resolve(incognito: incognito),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const SmdLogo(size: AppSizes.logoAppBar),
+          centerTitle: false,
+        ),
+        body: SafeArea(
+          child: CustomScrollView(
+            slivers: [
               SliverPadding(
-                padding: AppSpacing.resultSection,
+                padding: AppSpacing.screenContent,
                 sliver: SliverToBoxAdapter(
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: SlideTransition(
-                      position: _slideAnimation,
-                      child: resultWidget,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Scam Message Detector',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Paste a suspicious SMS, email, or URL below. '
+                        'Our AI will assess the scam risk instantly.',
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.homeSubtitle.copyWith(
+                          color: muted,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      IncognitoModeSwitch(enabled: !isLoading),
+                      const SizedBox(height: AppSpacing.md),
+                      ExampleSamplesRow(
+                        incognito: incognito,
+                        enabled: !isLoading,
+                        onSampleTap: _onExampleTap,
+                      ),
+                      if (showContextNotes) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        AnalysisNotesSection(
+                          incognito: incognito,
+                          isOnline: isOnline,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                      ] else
+                        const SizedBox(height: AppSpacing.md),
+                      MessageFieldShell(
+                        incognito: incognito,
+                        focused: !isLoading && _inputFocused,
+                        child: AnimatedSwitcher(
+                          duration: AppDurations.loaderFadeIn,
+                          switchInCurve: Curves.easeOut,
+                          switchOutCurve: Curves.easeIn,
+                          layoutBuilder: (current, previous) =>
+                              current ?? const SizedBox.shrink(),
+                          transitionBuilder: (child, animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: child,
+                            );
+                          },
+                          child: isLoading
+                              ? SizedBox(
+                                  key: const ValueKey('loader'),
+                                  width: double.infinity,
+                                  height: _inputSlotHeight,
+                                  child: AnalysisLoadingIndicator(
+                                    incognito: incognito,
+                                  ),
+                                )
+                              : MeasureSize(
+                                  key: const ValueKey('input'),
+                                  onChange: (size) {
+                                    if (size.height <= 0) {
+                                      return;
+                                    }
+                                    if ((size.height - _inputSlotHeight).abs() >
+                                        1) {
+                                      setState(
+                                        () => _inputSlotHeight = size.height,
+                                      );
+                                    }
+                                  },
+                                  child: MessageInputField(
+                                    controller: _messageController,
+                                    enabled: !isLoading,
+                                    incognito: incognito,
+                                    onAnalyze: _onAnalyze,
+                                    onPickEml: _onPickEml,
+                                    onClearEml: _clearEmlAttachment,
+                                    attachedEmlName: _attachedEmlName,
+                                    onFocusChanged: (focused) {
+                                      setState(() => _inputFocused = focused);
+                                    },
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              )
-            else
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
-          ],
+              ),
+              if (resultWidget != null)
+                SliverPadding(
+                  padding: AppSpacing.resultSection,
+                  sliver: SliverToBoxAdapter(
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: SlideTransition(
+                        position: _slideAnimation,
+                        child: resultWidget,
+                      ),
+                    ),
+                  ),
+                )
+              else
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: AppSpacing.xxl),
+                ),
+            ],
+          ),
         ),
       ),
     );

@@ -20,9 +20,11 @@ class ResultCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Text(
+                Text(
                   'Analysis Result',
-                  style: AppTextStyles.resultCardTitle,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontSize: 16,
+                  ),
                 ),
                 const Spacer(),
                 RiskBadge(riskLevel: analysis.riskLevel),

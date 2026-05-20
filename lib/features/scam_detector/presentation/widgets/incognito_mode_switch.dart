@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:scam_message_detector/core/theme/app_colors.dart';
+import 'package:scam_message_detector/core/theme/app_durations.dart';
+import 'package:scam_message_detector/core/theme/app_radius.dart';
+import 'package:scam_message_detector/core/theme/app_spacing.dart';
 import 'package:scam_message_detector/core/theme/app_text_styles.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/model_download_service.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/providers/incognito_mode_provider.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/app_modal_dialog.dart';
 
+/// Compact dark-mode-style toggle for on-device / private analysis.
 class IncognitoModeSwitch extends ConsumerWidget {
   const IncognitoModeSwitch({super.key, this.enabled = true});
 
@@ -17,30 +22,72 @@ class IncognitoModeSwitch extends ConsumerWidget {
     final isDownloading = downloadProgress != null;
     final switchEnabled = enabled && !isDownloading;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text(
-            'Incognito mode',
-            style: AppTextStyles.sectionLabel,
+    final surface = AppColors.resolveSurfaceElevated(incognito: incognito);
+    final border = AppColors.resolveBorder(incognito: incognito);
+    final primary = AppColors.resolveTextPrimary(incognito: incognito);
+    final muted = AppColors.resolveTextMuted(incognito: incognito);
+
+    return AnimatedContainer(
+      duration: AppDurations.incognitoTransition,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: border, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(
+                incognito ? Icons.dark_mode_rounded : Icons.dark_mode_outlined,
+                size: 20,
+                color: incognito ? AppColors.nortonYellow : muted,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Incognito mode',
+                      style: AppTextStyles.sectionLabel.copyWith(
+                        color: primary,
+                        fontSize: 13,
+                      ),
+                    ),
+                    Text(
+                      incognito ? 'On · private' : 'Off · cloud analysis',
+                      style: AppTextStyles.homeSubtitle.copyWith(
+                        color: muted,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: incognito,
+                onChanged: switchEnabled
+                    ? (value) => _onChanged(context, ref, value)
+                    : null,
+              ),
+            ],
           ),
-          subtitle: const Text(
-            'On-device PII scrubbing; skips OSINT on plain text to avoid '
-            'leaks.',
-            style: AppTextStyles.homeSubtitle,
-          ),
-          value: incognito,
-          onChanged: switchEnabled
-              ? (value) => _onChanged(context, ref, value)
-              : null,
-        ),
-        if (isDownloading) ...[
-          const SizedBox(height: 4),
-          LinearProgressIndicator(value: downloadProgress),
+          if (isDownloading) ...[
+            const SizedBox(height: AppSpacing.xs),
+            LinearProgressIndicator(
+              value: downloadProgress,
+              color: AppColors.nortonYellow,
+              backgroundColor: border,
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 
