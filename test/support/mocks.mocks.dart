@@ -236,6 +236,15 @@ class MockFlutterLlama extends _i1.Mock implements _i7.FlutterLlama {
 class MockModelDownloadService extends _i1.Mock
     implements _i13.ModelDownloadService {
   @override
+  _i8.Future<void> downloadModelInBackground() =>
+      (super.noSuchMethod(
+            Invocation.method(#downloadModelInBackground, []),
+            returnValue: _i8.Future<void>.value(),
+            returnValueForMissingStub: _i8.Future<void>.value(),
+          )
+          as _i8.Future<void>);
+
+  @override
   _i8.Future<bool> isModelDownloaded() =>
       (super.noSuchMethod(
             Invocation.method(#isModelDownloaded, []),
