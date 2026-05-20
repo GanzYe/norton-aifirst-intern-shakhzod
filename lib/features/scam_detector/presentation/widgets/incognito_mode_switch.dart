@@ -60,9 +60,7 @@ class IncognitoModeSwitch extends ConsumerWidget {
                   ),
                 ),
                 child: Icon(
-                  incognito
-                      ? Icons.shield_rounded
-                      : Icons.shield_outlined,
+                  incognito ? Icons.shield_rounded : Icons.shield_outlined,
                   size: 20,
                   color: incognito ? AppColors.textPrimary : muted,
                 ),
@@ -81,7 +79,7 @@ class IncognitoModeSwitch extends ConsumerWidget {
                     ),
                     Text(
                       isDownloading
-                          ? 'Downloading the on-device model (~350 MB)…'
+                          ? 'Downloading the on-device model (~1 GB)…'
                           : incognito
                           ? 'On — messages stay on your phone'
                           : 'Off — uses cloud AI when online',
@@ -144,7 +142,7 @@ class IncognitoModeSwitch extends ConsumerWidget {
         icon: Icons.download_outlined,
         message:
             'Incognito Mode uses an on-device AI model so your messages '
-            'never leave the phone. The model is about 350 MB and downloads '
+            'never leave the phone. The model is about 1 GB and downloads '
             'in the background—you can close the app and we\'ll notify you '
             'when it\'s ready.',
         actions: [
