@@ -84,4 +84,41 @@ abstract final class AppTextStyles {
     fontWeight: FontWeight.w900,
     height: 1,
   );
+
+  static const TextStyle inlineAnalyzeButton = TextStyle(
+    fontWeight: FontWeight.bold,
+    fontSize: 14,
+    color: AppColors.textPrimary,
+    letterSpacing: 0.2,
+  );
+
+  static const TextStyle inlineEmlButton = TextStyle(
+    fontWeight: FontWeight.w600,
+    fontSize: 13,
+    color: AppColors.textPrimary,
+  );
+
+  static const TextStyle loaderTitle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w700,
+    color: AppColors.textPrimary,
+  );
+
+  static const TextStyle loaderSubtitle = TextStyle(
+    fontSize: 13,
+    color: AppColors.textMuted,
+    height: AppSizes.subtitleLineHeight,
+  );
+
+  static const TextStyle loaderPhase = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0.4,
+    color: AppColors.nortonYellow,
+  );
+
+  static const TextStyle exampleChip = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w500,
+  );
 }

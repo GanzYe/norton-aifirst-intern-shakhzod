@@ -19,4 +19,18 @@ abstract final class AppSizes {
   static const double bodyLineHeight = 1.5;
   static const double subtitleLineHeight = 1.4;
   static const double splashTitleLineHeight = 1.2;
+
+  // MessageInputField sizing.
+  static const double inputFieldMinHeight = 168;
+  static const double inputInlineButtonHeight = 40;
+  static const double inputInlineButtonMinWidth = 112;
+  static const double inputInlineIcon = 18;
+  static const double inputBottomBarMinHeight = 44;
+
+  // AnalysisLoadingIndicator sizing.
+  static const double loaderMinHeight = 220;
+  static const double loaderBlobStageHeight = 152;
+  static const double loaderContentMaxWidth = 300;
+  static const double loaderProgressHeight = 4;
+  static const double loaderProgressMaxWidth = 200;
 }

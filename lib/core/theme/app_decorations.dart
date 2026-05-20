@@ -33,6 +33,63 @@ abstract final class AppDecorations {
     );
   }
 
+  static InputDecoration inlineInputField({required String hintText}) {
+    return InputDecoration(
+      hintText: hintText,
+      hintStyle: AppTextStyles.inputHint.copyWith(color: AppColors.hintMuted),
+      border: InputBorder.none,
+      enabledBorder: InputBorder.none,
+      focusedBorder: InputBorder.none,
+      isDense: true,
+      contentPadding: EdgeInsets.zero,
+    );
+  }
+
+  static BoxDecoration messageField({
+    required bool incognito,
+    required bool focused,
+  }) {
+    return BoxDecoration(
+      color: AppColors.resolveSurface(incognito: incognito),
+      borderRadius: AppRadius.inputFieldAll,
+      border: Border.all(
+        color: AppColors.resolveBorder(incognito: incognito),
+        width: focused ? AppSizes.borderThick : AppSizes.borderMedium,
+      ),
+    );
+  }
+
+  static BoxDecoration loaderField({required bool incognito}) {
+    return BoxDecoration(
+      color: AppColors.resolveSurface(incognito: incognito),
+      borderRadius: AppRadius.inputFieldAll,
+      border: Border.all(
+        color: AppColors.resolveBorder(incognito: incognito),
+        width: AppSizes.borderMedium,
+      ),
+    );
+  }
+
+  static BoxDecoration exampleChip({
+    required bool incognito,
+    required bool selected,
+  }) {
+    return BoxDecoration(
+      color: selected
+          ? AppColors.nortonYellow.withValues(
+              alpha: incognito ? 0.22 : AppColors.opacityRiskFill,
+            )
+          : AppColors.resolveSurfaceElevated(incognito: incognito),
+      borderRadius: AppRadius.pillAll,
+      border: Border.all(
+        color: selected
+            ? AppColors.nortonYellow
+            : AppColors.resolveBorder(incognito: incognito),
+        width: AppSizes.borderThin,
+      ),
+    );
+  }
+
   static BoxDecoration exampleTile({required Color borderColor}) {
     return BoxDecoration(
       borderRadius: AppRadius.smAll,

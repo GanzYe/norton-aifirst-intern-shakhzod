@@ -16,8 +16,9 @@ import 'dart:developer' as developer;
 ///   8. PROMPT              – augmented master-prompt assembly
 ///   9. GROQ                – primary cloud LLM (llama-3.3-70b-versatile)
 ///  10. GEMINI              – fallback cloud LLM (gemini-2.5-flash-lite)
-///  11. LLAMA_LOCAL         – on-device Qwen2-0.5B fallback
+///  11. LLAMA_LOCAL         – on-device Qwen2.5-1.5B fallback
 ///  12. ORCHESTRATOR        – top-level pipeline events
+///  13. MODEL_ROUTE         – payload routed to regional (cloud) vs local model
 ///
 /// Each entry is rendered as:
 ///   `[TAG] STAGE • message | k1=v1, k2=v2`
@@ -47,6 +48,75 @@ abstract final class PipelineLog {
     Map<String, Object?>? context,
   }) {
     _emit('DONE', stage, message: message, context: context);
+  }
+
+  /// Logs which model receives the analysis payload (regional cloud vs local).
+  ///
+  /// Emits a summary line plus a second log entry with the full [payload]
+  /// (not truncated).
+  static void modelRoute({
+    required String target,
+    required String model,
+    required String payload,
+  }) {
+    info(
+      'MODEL_ROUTE',
+      'payload sent to $target model',
+      context: {
+        'model': model,
+        'payloadChars': payload.length,
+      },
+    );
+    _logFullBody('MODEL_ROUTE', 'payload → $target ($model)', payload);
+  }
+
+  /// Logs the raw text returned by a model (cloud or on-device).
+  ///
+  /// Emits a summary line plus a second log entry with the full [response].
+  static void modelResponse({
+    required String source,
+    required String response,
+  }) {
+    info(
+      'MODEL_RESPONSE',
+      'response from $source',
+      context: {'responseChars': response.length},
+    );
+    _logFullBody('MODEL_RESPONSE', source, response);
+  }
+
+  /// Logs raw text entering PII scrub (Incognito path).
+  static void piiInput(String input) {
+    info('PII', 'scrub input', context: {'inputChars': input.length});
+    _logFullBody('PII', 'input', input);
+  }
+
+  /// Logs the user message chunk sent into the on-device PII model.
+  static void piiModelPrompt(String userMessage) {
+    info(
+      'PII',
+      'LLM user message',
+      context: {'userMessageChars': userMessage.length},
+    );
+    _logFullBody('PII', 'LLM user message', userMessage);
+  }
+
+  /// Logs redacted text leaving PII scrub ([via] is `regex`, `llm+regex`, …).
+  static void piiOutput(String output, {required String via}) {
+    info(
+      'PII',
+      'scrub output',
+      context: {'outputChars': output.length, 'via': via},
+    );
+    _logFullBody('PII', 'output ($via)', output);
+  }
+
+  static void _logFullBody(String stage, String label, String body) {
+    developer.log(
+      '[$stage] $label (${body.length} chars):\n$body',
+      name: _name,
+      level: 800,
+    );
   }
 
   /// Non-fatal anomaly (e.g. cloud rate-limit triggering fallback).

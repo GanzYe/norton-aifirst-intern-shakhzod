@@ -13,12 +13,32 @@ abstract final class AppColors {
   static const Color suspiciousOrange = Color(0xFFEF6C00);
   static const Color dangerousRed = Color(0xFFC62828);
 
+  // Incognito = app dark mode palette.
+  static const Color backgroundIncognito = Color(0xFF0E0E12);
+  static const Color surfaceIncognito = Color(0xFF1A1A22);
+  static const Color surfaceElevatedIncognito = Color(0xFF252530);
+  static const Color textPrimaryIncognito = Color(0xFFF2F2F5);
+  static const Color textMutedIncognito = Color(0xFF9A9AA8);
+  static const Color borderIncognito = Color(0xFF3D3D4A);
+  static const Color hintIncognito = Color(0xFF6B6B78);
+
+  // Loading / analyzing widget accents.
+  static const Color loaderGlow = Color(0xFFFFCC00);
+  static const Color loaderAccentViolet = Color(0xFF7C5CFF);
+  static const Color loaderAccentCyan = Color(0xFF4DD9FF);
+  static const Color loaderTrack = Color(0x1FFFFFFF);
+
   static const double opacityDisabled = 0.6;
   static const double opacityHint = 0.7;
   static const double opacityBorderMuted = 0.4;
   static const double opacityIconMuted = 0.8;
   static const double opacityRiskFill = 0.15;
   static const double opacityWarningFill = 0.14;
+  static const double opacityGlowSoft = 0.12;
+  static const double opacityGlowStrong = 0.35;
+  static const double opacitySweepFade = 0.0;
+  static const double opacityLoaderMesh = 0.52;
+  static const double opacityLoaderMeshLight = 0.42;
 
   static Color get warningBackground => nortonYellow.withValues();
 
@@ -37,4 +57,25 @@ abstract final class AppColors {
 
   static Color get disabledTextPrimary =>
       textPrimary.withValues(alpha: opacityDisabled);
+
+  static Color resolveBackground({required bool incognito}) =>
+      incognito ? backgroundIncognito : background;
+
+  static Color resolveSurface({required bool incognito}) =>
+      incognito ? surfaceIncognito : surface;
+
+  static Color resolveSurfaceElevated({required bool incognito}) =>
+      incognito ? surfaceElevatedIncognito : surface;
+
+  static Color resolveTextPrimary({required bool incognito}) =>
+      incognito ? textPrimaryIncognito : textPrimary;
+
+  static Color resolveTextMuted({required bool incognito}) =>
+      incognito ? textMutedIncognito : textMuted;
+
+  static Color resolveBorder({required bool incognito}) =>
+      incognito ? borderIncognito : borderBlack;
+
+  static Color resolveHint({required bool incognito}) =>
+      incognito ? hintIncognito : hintMuted;
 }
