@@ -1,0 +1,19 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:scam_message_detector/core/logging/pipeline_log_entry.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/entities/risk_level.dart';
+
+part 'scam_analysis.freezed.dart';
+
+@freezed
+abstract class ScamAnalysis with _$ScamAnalysis {
+  const factory ScamAnalysis({
+    required RiskLevel riskLevel,
+    required int confidence,
+    required String explanation,
+    @Default(false) bool resolvedLocally,
+    @Default(false) bool localModelUnavailable,
+    @Default(false) bool cloudFallback,
+    @Default(false) bool localAnalysisFailed,
+    @Default([]) List<PipelineLogEntry> pipelineLog,
+  }) = _ScamAnalysis;
+}

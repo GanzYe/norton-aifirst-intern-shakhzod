@@ -1,0 +1,9 @@
+scopes:
+    - name: lib
+      description: Application logic, features, routing, theme, and presentation in lib/; does not cover platform-specific code in android or ios.
+    - name: android
+      description: Android platform setup and resources in android/; does not cover iOS or lib code.
+    - name: ios
+      description: iOS project configuration and resources in ios/; does not cover Android or lib code.
+    - name: app
+      description: application logic, features, routing, theme, and presentation in lib/; does not cover platform-specific code in android or ios.

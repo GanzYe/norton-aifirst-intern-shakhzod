@@ -1,0 +1,14 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+  errors:
+    invalid_annotation_target: ignore
+    public_member_api_docs: ignore
+
+linter:
+  rules:
+    # Single-method repository interfaces are intentional (clean architecture).
+    one_member_abstracts: false
