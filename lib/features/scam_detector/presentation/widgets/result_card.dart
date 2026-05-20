@@ -22,9 +22,9 @@ class ResultCard extends StatelessWidget {
               children: [
                 Text(
                   'Analysis Result',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontSize: 16,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontSize: 16),
                 ),
                 const Spacer(),
                 RiskBadge(riskLevel: analysis.riskLevel),

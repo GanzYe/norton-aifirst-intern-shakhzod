@@ -31,14 +31,11 @@ void main() {
     test('extracts uuid into UrlScanResult (unlisted tier)', () async {
       adapter.onPost(
         '/scan/',
-        (server) => server.reply(
-          200,
-          {
-            'message': 'Submission successful',
-            'uuid': 'b6f7d4a0-1111-2222-3333-444455556666',
-            'visibility': 'unlisted',
-          },
-        ),
+        (server) => server.reply(200, {
+          'message': 'Submission successful',
+          'uuid': 'b6f7d4a0-1111-2222-3333-444455556666',
+          'visibility': 'unlisted',
+        }),
         data: {'url': testUrl, 'visibility': 'unlisted'},
       );
 
@@ -52,12 +49,9 @@ void main() {
     test('falls back to "result" field when "uuid" is absent', () async {
       adapter.onPost(
         '/scan/',
-        (server) => server.reply(
-          200,
-          {
-            'result': 'https://urlscan.io/result/legacy-id-123/',
-          },
-        ),
+        (server) => server.reply(200, {
+          'result': 'https://urlscan.io/result/legacy-id-123/',
+        }),
         data: {'url': testUrl, 'visibility': 'unlisted'},
       );
 
@@ -71,24 +65,18 @@ void main() {
         adapter
           ..onPost(
             '/scan/',
-            (server) => server.reply(
-              400,
-              {
-                'message': 'Visibility unlisted is not allowed',
-                'description': 'Your account does not support this tier',
-              },
-            ),
+            (server) => server.reply(400, {
+              'message': 'Visibility unlisted is not allowed',
+              'description': 'Your account does not support this tier',
+            }),
             data: {'url': testUrl, 'visibility': 'unlisted'},
           )
           ..onPost(
             '/scan/',
-            (server) => server.reply(
-              200,
-              {
-                'uuid': 'public-tier-uuid',
-                'visibility': 'public',
-              },
-            ),
+            (server) => server.reply(200, {
+              'uuid': 'public-tier-uuid',
+              'visibility': 'public',
+            }),
             data: {'url': testUrl, 'visibility': 'public'},
           );
 
@@ -119,14 +107,10 @@ void main() {
       );
     });
 
-    test('maps 401 (missing API key) to UrlScanRepositoryException',
-        () async {
+    test('maps 401 (missing API key) to UrlScanRepositoryException', () async {
       adapter.onPost(
         '/scan/',
-        (server) => server.reply(
-          401,
-          {'message': 'API key missing'},
-        ),
+        (server) => server.reply(401, {'message': 'API key missing'}),
         data: {'url': testUrl, 'visibility': 'unlisted'},
       );
 
@@ -142,51 +126,42 @@ void main() {
       );
     });
 
-    test(
-      'regression: surfaces server message + description on 400 '
-      '(e.g. "DNS Error – Could not resolve domain")',
-      () async {
-        adapter
-          ..onPost(
-            '/scan/',
-            (server) => server.reply(
-              400,
-              {
-                'message': 'DNS Error',
-                'description': 'Could not resolve domain name.',
-                'status': 400,
-              },
-            ),
-            data: {'url': testUrl, 'visibility': 'unlisted'},
-          )
-          // Second submit (after visibility downgrade attempt) — also 400
-          // but with the same DNS error message, so the caller surfaces it.
-          ..onPost(
-            '/scan/',
-            (server) => server.reply(
-              400,
-              {
-                'message': 'DNS Error',
-                'description': 'Could not resolve domain name.',
-                'status': 400,
-              },
-            ),
-            data: {'url': testUrl, 'visibility': 'public'},
-          );
-
-        expect(
-          () => repository.submitUrl(testUrl),
-          throwsA(
-            isA<UrlScanRepositoryException>()
-                .having((e) => e.statusCode, 'statusCode', 400)
-                .having(
-                  (e) => e.message,
-                  'message',
-                  allOf(contains('DNS Error'), contains('Could not resolve')),
-                ),
-          ),
+    test('regression: surfaces server message + description on 400 '
+        '(e.g. "DNS Error – Could not resolve domain")', () async {
+      adapter
+        ..onPost(
+          '/scan/',
+          (server) => server.reply(400, {
+            'message': 'DNS Error',
+            'description': 'Could not resolve domain name.',
+            'status': 400,
+          }),
+          data: {'url': testUrl, 'visibility': 'unlisted'},
+        )
+        // Second submit (after visibility downgrade attempt) — also 400
+        // but with the same DNS error message, so the caller surfaces it.
+        ..onPost(
+          '/scan/',
+          (server) => server.reply(400, {
+            'message': 'DNS Error',
+            'description': 'Could not resolve domain name.',
+            'status': 400,
+          }),
+          data: {'url': testUrl, 'visibility': 'public'},
         );
-      },
-    );
+
+      expect(
+        () => repository.submitUrl(testUrl),
+        throwsA(
+          isA<UrlScanRepositoryException>()
+              .having((e) => e.statusCode, 'statusCode', 400)
+              .having(
+                (e) => e.message,
+                'message',
+                allOf(contains('DNS Error'), contains('Could not resolve')),
+              ),
+        ),
+      );
+    });
   });
 }

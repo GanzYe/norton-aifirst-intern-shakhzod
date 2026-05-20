@@ -4,7 +4,7 @@ import 'package:scam_message_detector/core/logging/pipeline_log.dart';
 /// Thin wrapper around [Connectivity] for online/offline routing.
 class ConnectivityService {
   ConnectivityService({Connectivity? connectivity})
-      : _connectivity = connectivity ?? Connectivity();
+    : _connectivity = connectivity ?? Connectivity();
 
   final Connectivity _connectivity;
 
@@ -15,9 +15,7 @@ class ConnectivityService {
     PipelineLog.done(
       'CONNECTIVITY',
       message: online ? 'device is online' : 'device is offline',
-      context: {
-        'transports': results.map((r) => r.name).toList(),
-      },
+      context: {'transports': results.map((r) => r.name).toList()},
     );
     return online;
   }
@@ -29,8 +27,7 @@ class ConnectivityService {
       ConnectivityResult.ethernet ||
       ConnectivityResult.vpn ||
       ConnectivityResult.satellite ||
-      ConnectivityResult.other =>
-        true,
+      ConnectivityResult.other => true,
       ConnectivityResult.none || ConnectivityResult.bluetooth => false,
     };
   }

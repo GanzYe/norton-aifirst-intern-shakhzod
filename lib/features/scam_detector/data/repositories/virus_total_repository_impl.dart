@@ -18,9 +18,7 @@ class VirusTotalRepositoryImpl implements VirusTotalRepository {
       final submitResponse = await _dio.post<Map<String, dynamic>>(
         '/urls',
         data: {'url': url},
-        options: Options(
-          contentType: Headers.formUrlEncodedContentType,
-        ),
+        options: Options(contentType: Headers.formUrlEncodedContentType),
       );
 
       final submitStatus = submitResponse.statusCode;
@@ -58,7 +56,10 @@ class VirusTotalRepositoryImpl implements VirusTotalRepository {
       final reportStatus = reportResponse.statusCode;
       if (reportStatus == null || reportStatus < 200 || reportStatus >= 300) {
         final exc = VirusTotalRepositoryException(
-          _messageFromBody(reportResponse.data, 'Analysis report fetch failed.'),
+          _messageFromBody(
+            reportResponse.data,
+            'Analysis report fetch failed.',
+          ),
           statusCode: reportStatus,
         );
         PipelineLog.failure(_stage, exc, context: {'status': reportStatus});
@@ -67,13 +68,16 @@ class VirusTotalRepositoryImpl implements VirusTotalRepository {
 
       // `/analyses/{id}` returns `data.attributes.stats` (not
       // `last_analysis_stats`, which lives on the URL object).
-      final stats = reportResponse.data?['data']?['attributes']?['stats']
-          as Map<String, dynamic>?;
+      final stats =
+          reportResponse.data?['data']?['attributes']?['stats']
+              as Map<String, dynamic>?;
 
       final malicious = (stats?['malicious'] as num?)?.toInt() ?? 0;
-      final total = stats?.values
-              .whereType<num>()
-              .fold<int>(0, (sum, value) => sum + value.toInt()) ??
+      final total =
+          stats?.values.whereType<num>().fold<int>(
+            0,
+            (sum, value) => sum + value.toInt(),
+          ) ??
           0;
 
       final result = VirusTotalResult(
@@ -84,10 +88,7 @@ class VirusTotalRepositoryImpl implements VirusTotalRepository {
       PipelineLog.done(
         _stage,
         message: 'verdict received',
-        context: {
-          'malicious': malicious,
-          'totalEngines': total,
-        },
+        context: {'malicious': malicious, 'totalEngines': total},
       );
       return result;
     } on DioException catch (e, stack) {

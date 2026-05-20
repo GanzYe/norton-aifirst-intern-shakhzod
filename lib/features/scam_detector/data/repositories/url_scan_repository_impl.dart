@@ -47,9 +47,7 @@ class UrlScanRepositoryImpl implements UrlScanRepository {
       result = await _submit(url, _fallbackVisibility);
       if (result != null) return result;
 
-      const exc = UrlScanRepositoryException(
-        'URLScan submission failed.',
-      );
+      const exc = UrlScanRepositoryException('URLScan submission failed.');
       PipelineLog.failure(_stage, exc);
       throw exc;
     } on DioException catch (e, stack) {
@@ -80,25 +78,20 @@ class UrlScanRepositoryImpl implements UrlScanRepository {
     );
     final response = await _dio.post<Map<String, dynamic>>(
       _scanPath,
-      data: {
-        'url': url,
-        'visibility': visibility,
-      },
+      data: {'url': url, 'visibility': visibility},
     );
 
     final status = response.statusCode;
     if (status == null || status < 200 || status >= 300) {
-      final serverMessage = _messageFromBody(response.data) ??
+      final serverMessage =
+          _messageFromBody(response.data) ??
           'URLScan submission failed with status $status.';
       if (_looksLikeVisibilityRejection(status, serverMessage) &&
           visibility != _fallbackVisibility) {
         // Signal "retry with public" to the caller.
         return null;
       }
-      final exc = UrlScanRepositoryException(
-        serverMessage,
-        statusCode: status,
-      );
+      final exc = UrlScanRepositoryException(serverMessage, statusCode: status);
       PipelineLog.failure(
         _stage,
         exc,
@@ -107,7 +100,8 @@ class UrlScanRepositoryImpl implements UrlScanRepository {
       throw exc;
     }
 
-    final scanId = response.data?['uuid'] as String? ??
+    final scanId =
+        response.data?['uuid'] as String? ??
         response.data?['result'] as String?;
     if (scanId == null || scanId.isEmpty) {
       const exc = UrlScanRepositoryException(

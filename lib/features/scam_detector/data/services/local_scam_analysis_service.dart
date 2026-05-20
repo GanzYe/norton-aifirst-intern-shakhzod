@@ -58,9 +58,9 @@ class LocalScamAnalysisService {
     required FlutterLlama llama,
     required ModelDownloadService modelDownloadService,
     required LlamaNativeProbe nativeProbe,
-  })  : _llama = llama,
-        _modelDownload = modelDownloadService,
-        _nativeProbe = nativeProbe;
+  }) : _llama = llama,
+       _modelDownload = modelDownloadService,
+       _nativeProbe = nativeProbe;
 
   static const _stage = 'LLAMA_LOCAL';
   static const _loadTimeout = Duration(seconds: 45);
@@ -78,9 +78,7 @@ class LocalScamAnalysisService {
   Future<ScamAnalysis> analyze(String message) async {
     PipelineLog.start(_stage, context: {'messageChars': message.length});
     if (!await _modelDownload.isModelDownloaded()) {
-      const exc = LocalScamAnalysisException(
-        'Local model is not downloaded.',
-      );
+      const exc = LocalScamAnalysisException('Local model is not downloaded.');
       PipelineLog.failure(_stage, exc, message: 'model file missing');
       throw exc;
     }
@@ -283,7 +281,8 @@ class LocalScamAnalysisService {
     developer.log(
       'Could not parse local model response',
       name: 'LocalScamAnalysisService',
-      error: 'Unparseable response: '
+      error:
+          'Unparseable response: '
           '${cleaned.substring(0, cleaned.length.clamp(0, 240))}',
     );
     throw const LocalScamAnalysisException(

@@ -53,15 +53,17 @@ class _SplashScreenState extends State<SplashScreen>
 
     _glowStrength = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0, end: 1).chain(
-          CurveTween(curve: Curves.easeOut),
-        ),
+        tween: Tween<double>(
+          begin: 0,
+          end: 1,
+        ).chain(CurveTween(curve: Curves.easeOut)),
         weight: 35,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1, end: 0.55).chain(
-          CurveTween(curve: Curves.easeInOut),
-        ),
+        tween: Tween<double>(
+          begin: 1,
+          end: 0.55,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 30,
       ),
       TweenSequenceItem(tween: ConstantTween<double>(0.7), weight: 35),
@@ -74,15 +76,13 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    _taglineSlide = Tween<Offset>(
-      begin: const Offset(0, 0.18),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.32, 0.62, curve: Curves.easeOutCubic),
-      ),
-    );
+    _taglineSlide =
+        Tween<Offset>(begin: const Offset(0, 0.18), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: const Interval(0.32, 0.62, curve: Curves.easeOutCubic),
+          ),
+        );
 
     _footerOpacity = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
@@ -234,10 +234,7 @@ class _SplashLogoStage extends StatelessWidget {
 
 /// Soft Norton-yellow ambient motion behind the splash content.
 class _SplashAmbientPainter extends CustomPainter {
-  _SplashAmbientPainter({
-    required this.progress,
-    required this.breathe,
-  });
+  _SplashAmbientPainter({required this.progress, required this.breathe});
 
   final double progress;
   final double breathe;
@@ -257,46 +254,28 @@ class _SplashAmbientPainter extends CustomPainter {
     }) {
       final drift = math.sin(t + phase) * 18;
       final paint = Paint()
-        ..shader = RadialGradient(
-          colors: [
-            AppColors.nortonYellow.withValues(alpha: alpha * breathe),
-            AppColors.nortonYellow.withValues(alpha: 0),
-          ],
-        ).createShader(
-          Rect.fromCircle(
-            center: Offset(cx + drift, cy - drift * 0.4),
-            radius: radius,
-          ),
-        );
+        ..shader =
+            RadialGradient(
+              colors: [
+                AppColors.nortonYellow.withValues(alpha: alpha * breathe),
+                AppColors.nortonYellow.withValues(alpha: 0),
+              ],
+            ).createShader(
+              Rect.fromCircle(
+                center: Offset(cx + drift, cy - drift * 0.4),
+                radius: radius,
+              ),
+            );
       canvas.drawCircle(Offset(cx + drift, cy), radius, paint);
     }
 
-    blob(
-      cx: w * 0.22,
-      cy: h * 0.28,
-      radius: w * 0.34,
-      alpha: 0.14,
-      phase: 0,
-    );
-    blob(
-      cx: w * 0.78,
-      cy: h * 0.62,
-      radius: w * 0.28,
-      alpha: 0.1,
-      phase: 1.4,
-    );
-    blob(
-      cx: w * 0.5,
-      cy: h * 0.88,
-      radius: w * 0.22,
-      alpha: 0.08,
-      phase: 2.6,
-    );
+    blob(cx: w * 0.22, cy: h * 0.28, radius: w * 0.34, alpha: 0.14, phase: 0);
+    blob(cx: w * 0.78, cy: h * 0.62, radius: w * 0.28, alpha: 0.1, phase: 1.4);
+    blob(cx: w * 0.5, cy: h * 0.88, radius: w * 0.22, alpha: 0.08, phase: 2.6);
   }
 
   @override
   bool shouldRepaint(covariant _SplashAmbientPainter oldDelegate) {
-    return oldDelegate.progress != progress ||
-        oldDelegate.breathe != breathe;
+    return oldDelegate.progress != progress || oldDelegate.breathe != breathe;
   }
 }

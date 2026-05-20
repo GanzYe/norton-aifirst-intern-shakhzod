@@ -16,10 +16,7 @@ class ScamAnalysisController extends _$ScamAnalysisController {
   @override
   AsyncValue<ScamAnalysis?> build() => const AsyncData(null);
 
-  Future<void> analyze({
-    required String message,
-    String? emlRawContent,
-  }) async {
+  Future<void> analyze({required String message, String? emlRawContent}) async {
     state = const AsyncLoading();
 
     final background = ref.read(backgroundWorkCoordinatorProvider);
@@ -31,7 +28,9 @@ class ScamAnalysisController extends _$ScamAnalysisController {
             ? SoarInputKind.eml
             : InputClassifier.classify(message);
 
-        return ref.read(orchestrateScamAnalysisUseCaseProvider).call(
+        return ref
+            .read(orchestrateScamAnalysisUseCaseProvider)
+            .call(
               SoarAnalysisInput(
                 rawContent: message,
                 kind: kind,

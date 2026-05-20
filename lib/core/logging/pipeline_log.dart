@@ -62,10 +62,7 @@ abstract final class PipelineLog {
     info(
       'MODEL_ROUTE',
       'payload sent to $target model',
-      context: {
-        'model': model,
-        'payloadChars': payload.length,
-      },
+      context: {'model': model, 'payloadChars': payload.length},
     );
     _logFullBody('MODEL_ROUTE', 'payload → $target ($model)', payload);
   }

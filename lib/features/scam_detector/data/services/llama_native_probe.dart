@@ -9,10 +9,11 @@ import 'package:flutter/services.dart';
 /// plugin — see `MainActivity.kt` for details.
 class LlamaNativeProbe {
   LlamaNativeProbe({MethodChannel? channel})
-      : _channel = channel ??
-            const MethodChannel(
-              'com.norton.intern.scam_message_detector/native_health',
-            );
+    : _channel =
+          channel ??
+          const MethodChannel(
+            'com.norton.intern.scam_message_detector/native_health',
+          );
 
   final MethodChannel _channel;
   bool? _cached;

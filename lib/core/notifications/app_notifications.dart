@@ -59,7 +59,8 @@ abstract final class AppNotifications {
 
     await _plugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(channel);
 
     _initialized = true;
@@ -87,15 +88,19 @@ abstract final class AppNotifications {
 
   static Future<void> requestPermissionIfNeeded() async {
     if (defaultTargetPlatform == TargetPlatform.android) {
-      final android = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       await android?.requestNotificationsPermission();
       return;
     }
     if (defaultTargetPlatform == TargetPlatform.iOS ||
         defaultTargetPlatform == TargetPlatform.macOS) {
-      final ios = _plugin.resolvePlatformSpecificImplementation<
-          IOSFlutterLocalNotificationsPlugin>();
+      final ios = _plugin
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >();
       await ios?.requestPermissions(alert: true, badge: true, sound: true);
     }
   }
@@ -113,7 +118,8 @@ abstract final class AppNotifications {
     await _show(
       id: modelDownloadNotificationId,
       title: '${AppBranding.name} download failed',
-      body: 'Could not download the on-device AI model. Tap to retry in the app.',
+      body:
+          'Could not download the on-device AI model. Tap to retry in the app.',
     );
   }
 
@@ -132,7 +138,8 @@ abstract final class AppNotifications {
     await _show(
       id: analysisFailedNotificationId,
       title: '${AppBranding.name} analysis failed',
-      body: message ?? 'Something went wrong. Tap to open the app and try again.',
+      body:
+          message ?? 'Something went wrong. Tap to open the app and try again.',
     );
   }
 

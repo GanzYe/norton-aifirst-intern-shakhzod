@@ -32,7 +32,10 @@ abstract final class EmlAuthParser {
     final raw = match.group(1)?.toLowerCase();
     return switch (raw) {
       'pass' => AuthProtocolResult.pass,
-      'fail' || 'permerror' || 'temperror' || 'softfail' => AuthProtocolResult.fail,
+      'fail' ||
+      'permerror' ||
+      'temperror' ||
+      'softfail' => AuthProtocolResult.fail,
       'none' || 'neutral' => AuthProtocolResult.none,
       _ => AuthProtocolResult.unknown,
     };

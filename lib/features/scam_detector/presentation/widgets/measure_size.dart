@@ -3,11 +3,7 @@ import 'package:flutter/scheduler.dart';
 
 /// Reports the laid-out size of [child] after each frame.
 class MeasureSize extends StatefulWidget {
-  const MeasureSize({
-    super.key,
-    required this.onChange,
-    required this.child,
-  });
+  const MeasureSize({super.key, required this.onChange, required this.child});
 
   final ValueChanged<Size> onChange;
   final Widget child;

@@ -9,8 +9,8 @@ import 'package:scam_message_detector/features/scam_detector/data/dtos/scam_anal
 /// Gemini once quota is exhausted).
 class GroqRemoteDataSource {
   GroqRemoteDataSource({required Dio dio, required String apiKey})
-      : _dio = dio,
-        _apiKey = apiKey;
+    : _dio = dio,
+      _apiKey = apiKey;
 
   static const _stage = 'GROQ';
   static const _model = 'llama-3.3-70b-versatile';
@@ -134,8 +134,8 @@ Rules:
     } on GroqDataSourceException {
       rethrow;
     } on DioException catch (e, stack) {
-      final rateLimited = e.response?.statusCode == 429 ||
-          e.response?.statusCode == 402;
+      final rateLimited =
+          e.response?.statusCode == 429 || e.response?.statusCode == 402;
       final exc = GroqDataSourceException(
         e.message ?? 'Groq request failed.',
         rateLimited: rateLimited,

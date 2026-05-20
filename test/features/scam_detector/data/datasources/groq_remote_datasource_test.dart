@@ -11,7 +11,8 @@ void main() {
   late GroqRemoteDataSource ds;
 
   const apiKey = 'groq-test-key';
-  const message = 'Your bank account has been suspended, log in at evil.example to fix.';
+  const message =
+      'Your bank account has been suspended, log in at evil.example to fix.';
   const endpoint = '/openai/v1/chat/completions';
 
   // http_mock_adapter 0.6.x requires an explicit body matcher for POST routes
@@ -28,10 +29,7 @@ void main() {
         {
           'index': 0,
           'finish_reason': 'stop',
-          'message': {
-            'role': 'assistant',
-            'content': jsonEncode(verdict),
-          },
+          'message': {'role': 'assistant', 'content': jsonEncode(verdict)},
         },
       ],
     };
@@ -53,7 +51,8 @@ void main() {
           _chatPayload({
             'risk_level': 'DANGEROUS',
             'confidence': 91,
-            'explanation': 'Bank suspension wording plus a suspicious .example login link is classic phishing.',
+            'explanation':
+                'Bank suspension wording plus a suspicious .example login link is classic phishing.',
           }),
         ),
         data: anyBody,
@@ -66,47 +65,47 @@ void main() {
       expect(dto.explanation, contains('phishing'));
     });
 
-    test('analyzeAugmentedContent forwards the master prompt unchanged',
-        () async {
-      const masterPrompt = '## User content\n<scrubbed>\n## Threat intelligence\n- VT: 7/76 malicious';
+    test(
+      'analyzeAugmentedContent forwards the master prompt unchanged',
+      () async {
+        const masterPrompt =
+            '## User content\n<scrubbed>\n## Threat intelligence\n- VT: 7/76 malicious';
 
-      // Capture the outgoing request body via an interceptor so we can
-      // verify the master-prompt round-trip.
-      Map<String, dynamic>? capturedBody;
-      dio.interceptors.add(
-        InterceptorsWrapper(
-          onRequest: (options, handler) {
-            capturedBody = options.data as Map<String, dynamic>;
-            handler.next(options);
-          },
-        ),
-      );
+        // Capture the outgoing request body via an interceptor so we can
+        // verify the master-prompt round-trip.
+        Map<String, dynamic>? capturedBody;
+        dio.interceptors.add(
+          InterceptorsWrapper(
+            onRequest: (options, handler) {
+              capturedBody = options.data as Map<String, dynamic>;
+              handler.next(options);
+            },
+          ),
+        );
 
-      adapter.onPost(
-        endpoint,
-        (server) => server.reply(
-          200,
-          _chatPayload({
-            'risk_level': 'SUSPICIOUS',
-            'confidence': 70,
-            'explanation': 'Mixed OSINT signals warrant caution.',
-          }),
-        ),
-        data: anyBody,
-      );
+        adapter.onPost(
+          endpoint,
+          (server) => server.reply(
+            200,
+            _chatPayload({
+              'risk_level': 'SUSPICIOUS',
+              'confidence': 70,
+              'explanation': 'Mixed OSINT signals warrant caution.',
+            }),
+          ),
+          data: anyBody,
+        );
 
-      final dto = await ds.analyzeAugmentedContent(masterPrompt);
+        final dto = await ds.analyzeAugmentedContent(masterPrompt);
 
-      expect(dto.riskLevel, 'SUSPICIOUS');
-      expect(capturedBody, isNotNull);
-      final messages = capturedBody!['messages'] as List;
-      expect(messages.last['content'], masterPrompt);
-      expect(capturedBody!['model'], 'llama-3.3-70b-versatile');
-      expect(
-        capturedBody!['response_format'],
-        {'type': 'json_object'},
-      );
-    });
+        expect(dto.riskLevel, 'SUSPICIOUS');
+        expect(capturedBody, isNotNull);
+        final messages = capturedBody!['messages'] as List;
+        expect(messages.last['content'], masterPrompt);
+        expect(capturedBody!['model'], 'llama-3.3-70b-versatile');
+        expect(capturedBody!['response_format'], {'type': 'json_object'});
+      },
+    );
   });
 
   group('GroqRemoteDataSource — error handling', () {
@@ -177,8 +176,11 @@ void main() {
       expect(
         () => ds.analyzeMessage(message),
         throwsA(
-          isA<GroqDataSourceException>()
-              .having((e) => e.message, 'message', contains('Empty')),
+          isA<GroqDataSourceException>().having(
+            (e) => e.message,
+            'message',
+            contains('Empty'),
+          ),
         ),
       );
     });
@@ -189,10 +191,7 @@ void main() {
         (server) => server.reply(200, {
           'choices': [
             {
-              'message': {
-                'role': 'assistant',
-                'content': 'not-json-at-all',
-              },
+              'message': {'role': 'assistant', 'content': 'not-json-at-all'},
             },
           ],
         }),
@@ -202,23 +201,28 @@ void main() {
       expect(
         () => ds.analyzeMessage(message),
         throwsA(
-          isA<GroqDataSourceException>()
-              .having((e) => e.rateLimited, 'rateLimited', isFalse),
+          isA<GroqDataSourceException>().having(
+            (e) => e.rateLimited,
+            'rateLimited',
+            isFalse,
+          ),
         ),
       );
     });
 
-    test('missing API key short-circuits with non-rate-limited exception',
-        () async {
-      final dsNoKey = GroqRemoteDataSource(dio: dio, apiKey: '');
-      expect(dsNoKey.isConfigured, isFalse);
-      try {
-        await dsNoKey.analyzeMessage(message);
-        fail('Expected GroqDataSourceException');
-      } on GroqDataSourceException catch (e) {
-        expect(e.rateLimited, isFalse);
-        expect(e.message, contains('GROQ_API_KEY'));
-      }
-    });
+    test(
+      'missing API key short-circuits with non-rate-limited exception',
+      () async {
+        final dsNoKey = GroqRemoteDataSource(dio: dio, apiKey: '');
+        expect(dsNoKey.isConfigured, isFalse);
+        try {
+          await dsNoKey.analyzeMessage(message);
+          fail('Expected GroqDataSourceException');
+        } on GroqDataSourceException catch (e) {
+          expect(e.rateLimited, isFalse);
+          expect(e.message, contains('GROQ_API_KEY'));
+        }
+      },
+    );
   });
 }

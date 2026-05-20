@@ -41,18 +41,20 @@ class AppModalDialog extends StatelessWidget {
   final Widget? extra;
 
   Color get _accent => switch (tone) {
-        AppModalTone.info => AppColors.nortonYellow,
-        AppModalTone.warning => AppColors.suspiciousOrange,
-        AppModalTone.danger => AppColors.dangerousRed,
-      };
+    AppModalTone.info => AppColors.nortonYellow,
+    AppModalTone.warning => AppColors.suspiciousOrange,
+    AppModalTone.danger => AppColors.dangerousRed,
+  };
 
   Color get _background => switch (tone) {
-        AppModalTone.info => AppColors.surface,
-        AppModalTone.warning => AppColors.warningBackground,
-        AppModalTone.danger => AppColors.errorBackground,
-      };
+    AppModalTone.info => AppColors.surface,
+    AppModalTone.warning => AppColors.warningBackground,
+    AppModalTone.danger => AppColors.errorBackground,
+  };
 
-  IconData get _resolvedIcon => icon ?? switch (tone) {
+  IconData get _resolvedIcon =>
+      icon ??
+      switch (tone) {
         AppModalTone.info => Icons.info_outline,
         AppModalTone.warning => Icons.warning_amber_outlined,
         AppModalTone.danger => Icons.error_outline,
@@ -86,10 +88,7 @@ class AppModalDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(
-                height: AppSizes.borderThick * 2,
-                color: _accent,
-              ),
+              Container(height: AppSizes.borderThick * 2, color: _accent),
               Padding(
                 padding: AppSpacing.card,
                 child: Column(
@@ -114,10 +113,7 @@ class AppModalDialog extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    Text(
-                      message,
-                      style: AppTextStyles.resultBody,
-                    ),
+                    Text(message, style: AppTextStyles.resultBody),
                     if (extra != null) ...[
                       const SizedBox(height: AppSpacing.md),
                       extra!,

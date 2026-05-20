@@ -16,32 +16,37 @@ void main() {
 
   group('ConnectivityService.isOnline', () {
     test('returns true on wifi', () async {
-      when(connectivity.checkConnectivity())
-          .thenAnswer((_) async => [ConnectivityResult.wifi]);
+      when(
+        connectivity.checkConnectivity(),
+      ).thenAnswer((_) async => [ConnectivityResult.wifi]);
       expect(await service.isOnline(), isTrue);
     });
 
     test('returns true on mobile', () async {
-      when(connectivity.checkConnectivity())
-          .thenAnswer((_) async => [ConnectivityResult.mobile]);
+      when(
+        connectivity.checkConnectivity(),
+      ).thenAnswer((_) async => [ConnectivityResult.mobile]);
       expect(await service.isOnline(), isTrue);
     });
 
     test('returns true on ethernet', () async {
-      when(connectivity.checkConnectivity())
-          .thenAnswer((_) async => [ConnectivityResult.ethernet]);
+      when(
+        connectivity.checkConnectivity(),
+      ).thenAnswer((_) async => [ConnectivityResult.ethernet]);
       expect(await service.isOnline(), isTrue);
     });
 
     test('returns false when only "none" is reported', () async {
-      when(connectivity.checkConnectivity())
-          .thenAnswer((_) async => [ConnectivityResult.none]);
+      when(
+        connectivity.checkConnectivity(),
+      ).thenAnswer((_) async => [ConnectivityResult.none]);
       expect(await service.isOnline(), isFalse);
     });
 
     test('returns false when only "bluetooth" is reported', () async {
-      when(connectivity.checkConnectivity())
-          .thenAnswer((_) async => [ConnectivityResult.bluetooth]);
+      when(
+        connectivity.checkConnectivity(),
+      ).thenAnswer((_) async => [ConnectivityResult.bluetooth]);
       expect(await service.isOnline(), isFalse);
     });
 

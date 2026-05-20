@@ -11,13 +11,10 @@ class GeminiRemoteDataSource {
 
   final GenerativeModel _model;
 
-  Future<ScamAnalysisDto> analyzeMessage(String message) =>
-      _generateAnalysis(
-        Content.text(
-          'Analyze this message for scam/phishing risk:\n\n$message',
-        ),
-        promptChars: message.length,
-      );
+  Future<ScamAnalysisDto> analyzeMessage(String message) => _generateAnalysis(
+    Content.text('Analyze this message for scam/phishing risk:\n\n$message'),
+    promptChars: message.length,
+  );
 
   /// Accepts a fully-built SOAR master prompt (OSINT + scrubbed input).
   Future<ScamAnalysisDto> analyzeAugmentedContent(String masterPrompt) =>
@@ -51,10 +48,7 @@ class GeminiRemoteDataSource {
       PipelineLog.done(
         _stage,
         message: 'verdict received',
-        context: {
-          'riskLevel': dto.riskLevel,
-          'confidence': dto.confidence,
-        },
+        context: {'riskLevel': dto.riskLevel, 'confidence': dto.confidence},
       );
       return dto;
     } on GenerativeAIException catch (e, stack) {

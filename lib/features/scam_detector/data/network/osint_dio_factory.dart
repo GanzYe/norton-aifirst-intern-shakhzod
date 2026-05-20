@@ -52,10 +52,7 @@ abstract final class OsintDioFactory {
         baseUrl: 'https://urlscan.io/api/v1',
         connectTimeout: _connectTimeout,
         receiveTimeout: _receiveTimeout,
-        headers: {
-          'Content-Type': 'application/json',
-          'API-Key': apiKey,
-        },
+        headers: {'Content-Type': 'application/json', 'API-Key': apiKey},
         validateStatus: (status) => status != null && status < 500,
       ),
     );

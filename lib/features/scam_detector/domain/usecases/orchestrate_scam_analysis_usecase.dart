@@ -36,16 +36,16 @@ class OrchestrateScamAnalysisUseCase {
     required ConnectivityService connectivityService,
     required LocalScamAnalysisService localScamAnalysisService,
     required ModelDownloadService modelDownloadService,
-  })  : _scamAnalysisRepository = scamAnalysisRepository,
-        _piiRedactionRepository = piiRedactionRepository,
-        _virusTotalRepository = virusTotalRepository,
-        _abuseIpdbRepository = abuseIpdbRepository,
-        _urlScanRepository = urlScanRepository,
-        _emlParseRepository = emlParseRepository,
-        _buildAugmentedPromptUseCase = buildAugmentedPromptUseCase,
-        _connectivityService = connectivityService,
-        _localScamAnalysisService = localScamAnalysisService,
-        _modelDownloadService = modelDownloadService;
+  }) : _scamAnalysisRepository = scamAnalysisRepository,
+       _piiRedactionRepository = piiRedactionRepository,
+       _virusTotalRepository = virusTotalRepository,
+       _abuseIpdbRepository = abuseIpdbRepository,
+       _urlScanRepository = urlScanRepository,
+       _emlParseRepository = emlParseRepository,
+       _buildAugmentedPromptUseCase = buildAugmentedPromptUseCase,
+       _connectivityService = connectivityService,
+       _localScamAnalysisService = localScamAnalysisService,
+       _modelDownloadService = modelDownloadService;
 
   final ScamAnalysisRepository _scamAnalysisRepository;
   final PiiRedactionRepository _piiRedactionRepository;
@@ -157,8 +157,9 @@ class OrchestrateScamAnalysisUseCase {
     );
 
     try {
-      final analysis =
-          await _scamAnalysisRepository.analyzeAugmentedPrompt(masterPrompt);
+      final analysis = await _scamAnalysisRepository.analyzeAugmentedPrompt(
+        masterPrompt,
+      );
       PipelineLog.done(
         _stage,
         message: 'cloud verdict returned',
@@ -224,10 +225,7 @@ class OrchestrateScamAnalysisUseCase {
 
     final modelReady = await _modelDownloadService.isModelDownloaded();
     if (!modelReady) {
-      PipelineLog.warn(
-        _stage,
-        'offline and on-device model not downloaded',
-      );
+      PipelineLog.warn(_stage, 'offline and on-device model not downloaded');
       return const ScamAnalysis(
         riskLevel: RiskLevel.safe,
         confidence: 0,

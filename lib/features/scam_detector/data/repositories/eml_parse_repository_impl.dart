@@ -11,7 +11,8 @@ class EmlParseRepositoryImpl implements EmlParseRepository {
         ? EmlAuthParser.parseAuthenticationResults(authHeader)
         : null;
 
-    final bodyText = message.decodeTextPlainPart() ??
+    final bodyText =
+        message.decodeTextPlainPart() ??
         message.decodeTextHtmlPart()?.replaceAll(RegExp(r'<[^>]*>'), ' ') ??
         '';
 

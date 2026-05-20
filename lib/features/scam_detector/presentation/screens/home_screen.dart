@@ -73,7 +73,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Future<void> _onAnalyze() async {
     FocusScope.of(context).unfocus();
     _resultAnimController.reset();
-    await ref.read(scamAnalysisControllerProvider.notifier).analyze(
+    await ref
+        .read(scamAnalysisControllerProvider.notifier)
+        .analyze(
           message: _messageController.text,
           emlRawContent: _attachedEmlRaw,
         );
@@ -210,8 +212,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     });
 
     final analysis = analysisState.valueOrNull;
-    final resultWidget =
-        analysis != null ? _buildAnalysisResult(analysis) : null;
+    final resultWidget = analysis != null
+        ? _buildAnalysisResult(analysis)
+        : null;
     final muted = AppColors.resolveTextMuted(incognito: incognito);
 
     return AnalysisBackgroundLifecycle(

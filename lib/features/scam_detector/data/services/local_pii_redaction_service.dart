@@ -93,9 +93,9 @@ class LocalPiiRedactionService implements PiiRedactionRepository {
     required FlutterLlama llama,
     required ModelDownloadService modelDownloadService,
     required LlamaNativeProbe nativeProbe,
-  })  : _llama = llama,
-        _modelDownload = modelDownloadService,
-        _nativeProbe = nativeProbe;
+  }) : _llama = llama,
+       _modelDownload = modelDownloadService,
+       _nativeProbe = nativeProbe;
 
   static const _loadTimeout = Duration(seconds: 45);
   static const _generateTimeout = Duration(minutes: 1);
@@ -159,10 +159,7 @@ class LocalPiiRedactionService implements PiiRedactionRepository {
         PipelineLog.warn(
           _stage,
           'LLM scrub rejected; using regex baseline',
-          context: {
-            'inputChars': input.length,
-            'llmChars': llmBody.length,
-          },
+          context: {'inputChars': input.length, 'llmChars': llmBody.length},
         );
         return _finish(regexBaseline, via: 'regex');
       }
@@ -326,9 +323,10 @@ class LocalPiiRedactionService implements PiiRedactionRepository {
     PipelineLog.piiOutput(output, via: via);
     PipelineLog.done(
       _stage,
-      message: via == 'regex' ? 'regex scrub applied' : 'LLM+regex scrub applied',
+      message: via == 'regex'
+          ? 'regex scrub applied'
+          : 'LLM+regex scrub applied',
     );
     return output;
   }
-
 }

@@ -17,10 +17,7 @@ class AbuseIpdbRepositoryImpl implements AbuseIpdbRepository {
       PipelineLog.info(_stage, 'GET /check');
       final response = await _dio.get<Map<String, dynamic>>(
         '/check',
-        queryParameters: {
-          'ipAddress': ipAddress,
-          'maxAgeInDays': 90,
-        },
+        queryParameters: {'ipAddress': ipAddress, 'maxAgeInDays': 90},
       );
 
       final status = response.statusCode;

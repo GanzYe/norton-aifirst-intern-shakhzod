@@ -12,8 +12,8 @@ class ScamAnalysisRepositoryImpl implements ScamAnalysisRepository {
   const ScamAnalysisRepositoryImpl({
     required GroqRemoteDataSource groqRemoteDataSource,
     required GeminiRemoteDataSource geminiRemoteDataSource,
-  })  : _groq = groqRemoteDataSource,
-        _gemini = geminiRemoteDataSource;
+  }) : _groq = groqRemoteDataSource,
+       _gemini = geminiRemoteDataSource;
 
   static const _stage = 'CLOUD_CASCADE';
 

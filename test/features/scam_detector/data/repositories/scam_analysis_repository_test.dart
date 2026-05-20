@@ -15,10 +15,10 @@ void main() {
   const message = 'Wire transfer required by EOD to keep your account active.';
 
   ScamAnalysisDto dto(String risk, int confidence) => ScamAnalysisDto(
-        riskLevel: risk,
-        confidence: confidence,
-        explanation: 'verdict-from-fake',
-      );
+    riskLevel: risk,
+    confidence: confidence,
+    explanation: 'verdict-from-fake',
+  );
 
   setUp(() {
     groq = MockGroqRemoteDataSource();
@@ -32,8 +32,9 @@ void main() {
   group('ScamAnalysisRepositoryImpl — cloud cascade', () {
     test('uses Groq when configured and Groq succeeds', () async {
       when(groq.isConfigured).thenReturn(true);
-      when(groq.analyzeMessage(message))
-          .thenAnswer((_) async => dto('SAFE', 90));
+      when(
+        groq.analyzeMessage(message),
+      ).thenAnswer((_) async => dto('SAFE', 90));
 
       final result = await repository.analyzeMessage(message);
 
@@ -42,17 +43,14 @@ void main() {
       verifyNever(gemini.analyzeMessage(any));
     });
 
-    test('falls through to Gemini when Groq rate-limits (429/402)',
-        () async {
+    test('falls through to Gemini when Groq rate-limits (429/402)', () async {
       when(groq.isConfigured).thenReturn(true);
       when(groq.analyzeMessage(message)).thenThrow(
-        const GroqDataSourceException(
-          'rate limited',
-          rateLimited: true,
-        ),
+        const GroqDataSourceException('rate limited', rateLimited: true),
       );
-      when(gemini.analyzeMessage(message))
-          .thenAnswer((_) async => dto('DANGEROUS', 95));
+      when(
+        gemini.analyzeMessage(message),
+      ).thenAnswer((_) async => dto('DANGEROUS', 95));
 
       final result = await repository.analyzeMessage(message);
 
@@ -63,13 +61,11 @@ void main() {
     test('falls through to Gemini on any GroqDataSourceException', () async {
       when(groq.isConfigured).thenReturn(true);
       when(groq.analyzeMessage(message)).thenThrow(
-        const GroqDataSourceException(
-          'parse error',
-          rateLimited: false,
-        ),
+        const GroqDataSourceException('parse error', rateLimited: false),
       );
-      when(gemini.analyzeMessage(message))
-          .thenAnswer((_) async => dto('SUSPICIOUS', 60));
+      when(
+        gemini.analyzeMessage(message),
+      ).thenAnswer((_) async => dto('SUSPICIOUS', 60));
 
       final result = await repository.analyzeMessage(message);
       expect(result.riskLevel.label, 'SUSPICIOUS');
@@ -78,8 +74,9 @@ void main() {
 
     test('skips Groq entirely when not configured (no API key)', () async {
       when(groq.isConfigured).thenReturn(false);
-      when(gemini.analyzeMessage(message))
-          .thenAnswer((_) async => dto('SAFE', 80));
+      when(
+        gemini.analyzeMessage(message),
+      ).thenAnswer((_) async => dto('SAFE', 80));
 
       final result = await repository.analyzeMessage(message);
 
@@ -93,9 +90,9 @@ void main() {
       when(groq.analyzeMessage(message)).thenThrow(
         const GroqDataSourceException('groq down', rateLimited: true),
       );
-      when(gemini.analyzeMessage(message)).thenThrow(
-        const GeminiDataSourceException('gemini down'),
-      );
+      when(
+        gemini.analyzeMessage(message),
+      ).thenThrow(const GeminiDataSourceException('gemini down'));
 
       expect(
         () => repository.analyzeMessage(message),
@@ -103,18 +100,22 @@ void main() {
       );
     });
 
-    test('analyzeAugmentedPrompt uses the augmented-content endpoints',
-        () async {
-      const masterPrompt = '## User content\n<scrubbed>\n## Threat intel\n- VT: 5/76';
-      when(groq.isConfigured).thenReturn(true);
-      when(groq.analyzeAugmentedContent(masterPrompt))
-          .thenAnswer((_) async => dto('DANGEROUS', 88));
+    test(
+      'analyzeAugmentedPrompt uses the augmented-content endpoints',
+      () async {
+        const masterPrompt =
+            '## User content\n<scrubbed>\n## Threat intel\n- VT: 5/76';
+        when(groq.isConfigured).thenReturn(true);
+        when(
+          groq.analyzeAugmentedContent(masterPrompt),
+        ).thenAnswer((_) async => dto('DANGEROUS', 88));
 
-      final result = await repository.analyzeAugmentedPrompt(masterPrompt);
+        final result = await repository.analyzeAugmentedPrompt(masterPrompt);
 
-      expect(result.riskLevel.label, 'DANGEROUS');
-      verify(groq.analyzeAugmentedContent(masterPrompt)).called(1);
-      verifyNever(gemini.analyzeAugmentedContent(any));
-    });
+        expect(result.riskLevel.label, 'DANGEROUS');
+        verify(groq.analyzeAugmentedContent(masterPrompt)).called(1);
+        verifyNever(gemini.analyzeAugmentedContent(any));
+      },
+    );
   });
 }

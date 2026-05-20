@@ -64,8 +64,7 @@ class BackgroundWorkCoordinator {
     }
 
     if (update is TaskProgressUpdate) {
-      _ref.read(modelDownloadProgressProvider.notifier).state =
-          update.progress;
+      _ref.read(modelDownloadProgressProvider.notifier).state = update.progress;
       return;
     }
 
@@ -105,7 +104,8 @@ class BackgroundWorkCoordinator {
       androidNotificationOptions: AndroidNotificationOptions(
         channelId: 'smd_analysis_foreground',
         channelName: AppBranding.name,
-        channelDescription: 'Shown while ${AppBranding.name} analyzes a message.',
+        channelDescription:
+            'Shown while ${AppBranding.name} analyzes a message.',
         onlyAlertOnce: true,
       ),
       iosNotificationOptions: const IOSNotificationOptions(
@@ -171,13 +171,13 @@ class BackgroundWorkCoordinator {
   }
 }
 
-final backgroundWorkCoordinatorProvider = Provider<BackgroundWorkCoordinator>(
-  (ref) {
-    final coordinator = BackgroundWorkCoordinator(ref);
-    ref.onDispose(coordinator.dispose);
-    return coordinator;
-  },
-);
+final backgroundWorkCoordinatorProvider = Provider<BackgroundWorkCoordinator>((
+  ref,
+) {
+  final coordinator = BackgroundWorkCoordinator(ref);
+  ref.onDispose(coordinator.dispose);
+  return coordinator;
+});
 
 final backgroundWorkInitProvider = FutureProvider<void>((ref) async {
   await ref.read(backgroundWorkCoordinatorProvider).initialize();

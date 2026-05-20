@@ -88,55 +88,57 @@ class _MessageInputFieldState extends State<MessageInputField> {
   @override
   Widget build(BuildContext context) {
     final showAnalyze = _hasText && widget.enabled;
-    final textPrimary =
-        AppColors.resolveTextPrimary(incognito: widget.incognito);
+    final textPrimary = AppColors.resolveTextPrimary(
+      incognito: widget.incognito,
+    );
     final hintColor = AppColors.resolveHint(incognito: widget.incognito);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-          Padding(
-            padding: AppSpacing.inputFieldText,
-            child: TextField(
-              controller: widget.controller,
-              focusNode: _focusNode,
-              enabled: widget.enabled,
-              maxLines: null,
-              minLines: 5,
-              textInputAction: TextInputAction.newline,
-              style: TextStyle(color: textPrimary),
-              cursorColor: AppColors.nortonYellow,
-              decoration: AppDecorations.inlineInputField(
-                hintText: widget.hintText,
-              ).copyWith(
-                hintStyle: AppTextStyles.inputHint.copyWith(color: hintColor),
-              ),
+        Padding(
+          padding: AppSpacing.inputFieldText,
+          child: TextField(
+            controller: widget.controller,
+            focusNode: _focusNode,
+            enabled: widget.enabled,
+            maxLines: null,
+            minLines: 5,
+            textInputAction: TextInputAction.newline,
+            style: TextStyle(color: textPrimary),
+            cursorColor: AppColors.nortonYellow,
+            decoration:
+                AppDecorations.inlineInputField(
+                  hintText: widget.hintText,
+                ).copyWith(
+                  hintStyle: AppTextStyles.inputHint.copyWith(color: hintColor),
+                ),
+          ),
+        ),
+        ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: AppSizes.inputBottomBarMinHeight,
+          ),
+          child: Padding(
+            padding: AppSpacing.inputFieldActions,
+            child: Row(
+              children: [
+                _EmlControl(
+                  enabled: widget.enabled,
+                  incognito: widget.incognito,
+                  attachedName: widget.attachedEmlName,
+                  onPick: widget.onPickEml,
+                  onClear: widget.onClearEml,
+                ),
+                const Spacer(),
+                _InlineAnalyzeButton(
+                  visible: showAnalyze,
+                  onPressed: widget.onAnalyze,
+                ),
+              ],
             ),
           ),
-          ConstrainedBox(
-            constraints: const BoxConstraints(
-              minHeight: AppSizes.inputBottomBarMinHeight,
-            ),
-            child: Padding(
-              padding: AppSpacing.inputFieldActions,
-              child: Row(
-                children: [
-                  _EmlControl(
-                    enabled: widget.enabled,
-                    incognito: widget.incognito,
-                    attachedName: widget.attachedEmlName,
-                    onPick: widget.onPickEml,
-                    onClear: widget.onClearEml,
-                  ),
-                  const Spacer(),
-                  _InlineAnalyzeButton(
-                    visible: showAnalyze,
-                    onPressed: widget.onAnalyze,
-                  ),
-                ],
-              ),
-            ),
-          ),
+        ),
       ],
     );
   }
@@ -212,7 +214,10 @@ class _EmlUploadButton extends StatelessWidget {
                 color: fg,
               ),
               const SizedBox(width: 4),
-              Text('.eml', style: AppTextStyles.inlineEmlButton.copyWith(color: fg)),
+              Text(
+                '.eml',
+                style: AppTextStyles.inlineEmlButton.copyWith(color: fg),
+              ),
             ],
           ),
         ),
@@ -253,11 +258,7 @@ class _EmlAttachedChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.email_outlined,
-            size: AppSizes.inputInlineIcon,
-            color: fg,
-          ),
+          Icon(Icons.email_outlined, size: AppSizes.inputInlineIcon, color: fg),
           const SizedBox(width: 4),
           Flexible(
             child: Text(

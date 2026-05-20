@@ -34,7 +34,8 @@ void main() {
 
   group('LocalScamAnalysisService.parseModelResponseForTest', () {
     test('parses a clean JSON object', () {
-      const raw = '{"risk_level":"DANGEROUS","confidence":92,"explanation":"Phishing link plus urgency."}';
+      const raw =
+          '{"risk_level":"DANGEROUS","confidence":92,"explanation":"Phishing link plus urgency."}';
       final result = service.parseModelResponseForTest(raw);
       expect(result.riskLevel, RiskLevel.dangerous);
       expect(result.confidence, 92);
@@ -60,18 +61,21 @@ void main() {
       expect(result.confidence, 60);
     });
 
-    test('falls back to natural-language `LABEL: explanation` (regression for the bug fix)',
-        () {
-      const raw =
-          'SUSPICIOUS: The message appears to be a phishing attempt. The sender mimics a bank.';
-      final result = service.parseModelResponseForTest(raw);
-      expect(result.riskLevel, RiskLevel.suspicious);
-      expect(result.explanation, contains('phishing'));
-      expect(result.confidence, inInclusiveRange(0, 100));
-    });
+    test(
+      'falls back to natural-language `LABEL: explanation` (regression for the bug fix)',
+      () {
+        const raw =
+            'SUSPICIOUS: The message appears to be a phishing attempt. The sender mimics a bank.';
+        final result = service.parseModelResponseForTest(raw);
+        expect(result.riskLevel, RiskLevel.suspicious);
+        expect(result.explanation, contains('phishing'));
+        expect(result.confidence, inInclusiveRange(0, 100));
+      },
+    );
 
     test('recovers DANGEROUS verdict from prose without colon', () {
-      const raw = 'This is clearly DANGEROUS — phishing for banking credentials.';
+      const raw =
+          'This is clearly DANGEROUS — phishing for banking credentials.';
       final result = service.parseModelResponseForTest(raw);
       expect(result.riskLevel, RiskLevel.dangerous);
     });
@@ -85,7 +89,8 @@ void main() {
     });
 
     test('clamps absurd confidence values to 0..100', () {
-      const raw = '{"risk_level":"DANGEROUS","confidence":9999,"explanation":"x"}';
+      const raw =
+          '{"risk_level":"DANGEROUS","confidence":9999,"explanation":"x"}';
       final result = service.parseModelResponseForTest(raw);
       expect(result.confidence, 100);
     });
@@ -167,47 +172,45 @@ void main() {
     });
 
     test(
-        'reloads the model and unloads after every analyze() so the KV cache '
-        'stays clean (regression for ggml_abort SIGABRT on the second call)',
-        () async {
-      // flutter_llama 1.1.2's native bridge never calls
-      // `llama_kv_cache_clear()` between independent generate() calls, so
-      // re-using a model load across calls trips `ggml_abort` inside
-      // `llama_context::decode`. Each analyze() must therefore do a full
-      // load/generate/unload cycle.
-      wireHealthyEnv();
-      when(llama.generate(any)).thenAnswer(
-        (_) async => const LlamaResponse(
-          text: '{"risk_level":"SAFE","confidence":70,"explanation":"x"}',
-        ),
-      );
-
-      await service.analyze('one');
-      await service.analyze('two');
-
-      verify(llama.loadModel(any)).called(2);
-      verify(llama.generate(any)).called(2);
-      verify(llama.unloadModel()).called(2);
-    });
-
-    test(
-      'configures the model with a 4096-token context window',
+      'reloads the model and unloads after every analyze() so the KV cache '
+      'stays clean (regression for ggml_abort SIGABRT on the second call)',
       () async {
+        // flutter_llama 1.1.2's native bridge never calls
+        // `llama_kv_cache_clear()` between independent generate() calls, so
+        // re-using a model load across calls trips `ggml_abort` inside
+        // `llama_context::decode`. Each analyze() must therefore do a full
+        // load/generate/unload cycle.
         wireHealthyEnv();
         when(llama.generate(any)).thenAnswer(
           (_) async => const LlamaResponse(
-            text: '{"risk_level":"SAFE","confidence":50,"explanation":"x"}',
+            text: '{"risk_level":"SAFE","confidence":70,"explanation":"x"}',
           ),
         );
 
-        await service.analyze('hello');
+        await service.analyze('one');
+        await service.analyze('two');
 
-        final config =
-            verify(llama.loadModel(captureAny)).captured.single as LlamaConfig;
-        expect(config.contextSize, 4096);
-        expect(config.useGpu, isFalse);
+        verify(llama.loadModel(any)).called(2);
+        verify(llama.generate(any)).called(2);
+        verify(llama.unloadModel()).called(2);
       },
     );
+
+    test('configures the model with a 4096-token context window', () async {
+      wireHealthyEnv();
+      when(llama.generate(any)).thenAnswer(
+        (_) async => const LlamaResponse(
+          text: '{"risk_level":"SAFE","confidence":50,"explanation":"x"}',
+        ),
+      );
+
+      await service.analyze('hello');
+
+      final config =
+          verify(llama.loadModel(captureAny)).captured.single as LlamaConfig;
+      expect(config.contextSize, 4096);
+      expect(config.useGpu, isFalse);
+    });
 
     test(
       'sizes batchSize >= contextSize so single-batch prefill cannot overflow '
@@ -251,9 +254,9 @@ void main() {
 
     test('throws when generate returns empty text', () async {
       wireHealthyEnv();
-      when(llama.generate(any)).thenAnswer(
-        (_) async => const LlamaResponse(text: '   '),
-      );
+      when(
+        llama.generate(any),
+      ).thenAnswer((_) async => const LlamaResponse(text: '   '));
 
       expect(
         () => service.analyze('hello'),
@@ -267,25 +270,29 @@ void main() {
       );
     });
 
-    test('wraps unexpected exceptions into LocalScamAnalysisException',
-        () async {
-      wireHealthyEnv();
-      when(llama.generate(any)).thenThrow(StateError('native crash'));
+    test(
+      'wraps unexpected exceptions into LocalScamAnalysisException',
+      () async {
+        wireHealthyEnv();
+        when(llama.generate(any)).thenThrow(StateError('native crash'));
 
-      expect(
-        () => service.analyze('hello'),
-        throwsA(isA<LocalScamAnalysisException>()),
-      );
-    });
+        expect(
+          () => service.analyze('hello'),
+          throwsA(isA<LocalScamAnalysisException>()),
+        );
+      },
+    );
   });
 
   group('LocalScamAnalysisService.isUsable', () {
-    test('returns true only when model is on disk AND native probe healthy',
-        () async {
-      when(modelDownload.isModelDownloaded()).thenAnswer((_) async => true);
-      when(probe.isAvailable()).thenAnswer((_) async => true);
-      expect(await service.isUsable(), isTrue);
-    });
+    test(
+      'returns true only when model is on disk AND native probe healthy',
+      () async {
+        when(modelDownload.isModelDownloaded()).thenAnswer((_) async => true);
+        when(probe.isAvailable()).thenAnswer((_) async => true);
+        expect(await service.isUsable(), isTrue);
+      },
+    );
 
     test('returns false if model is missing', () async {
       when(modelDownload.isModelDownloaded()).thenAnswer((_) async => false);

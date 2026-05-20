@@ -170,22 +170,22 @@ class _AnalysisLoadingIndicatorState extends State<AnalysisLoadingIndicator>
                       style: AppTextStyles.loaderPhase,
                     ),
                   ),
-                    const SizedBox(height: AppSpacing.lg),
-                    if (_effectsReady)
-                      RepaintBoundary(
-                        child: AnimatedBuilder(
-                          animation: _shimmerController,
-                          builder: (context, _) => _MinimalProgressBar(
-                            progress: _shimmerController.value,
-                            incognito: widget.incognito,
-                          ),
+                  const SizedBox(height: AppSpacing.lg),
+                  if (_effectsReady)
+                    RepaintBoundary(
+                      child: AnimatedBuilder(
+                        animation: _shimmerController,
+                        builder: (context, _) => _MinimalProgressBar(
+                          progress: _shimmerController.value,
+                          incognito: widget.incognito,
                         ),
-                      )
-                    else
-                      _MinimalProgressBar(
-                        progress: 0.35,
-                        incognito: widget.incognito,
                       ),
+                    )
+                  else
+                    _MinimalProgressBar(
+                      progress: 0.35,
+                      incognito: widget.incognito,
+                    ),
                 ],
               ),
             ),

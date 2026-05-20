@@ -119,10 +119,7 @@ class ModelDownloadService {
       if (e is ModelDownloadException) {
         rethrow;
       }
-      throw ModelDownloadException(
-        'Model download failed.',
-        cause: e,
-      );
+      throw ModelDownloadException('Model download failed.', cause: e);
     }
   }
 

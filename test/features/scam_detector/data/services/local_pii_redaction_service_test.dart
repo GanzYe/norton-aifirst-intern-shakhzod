@@ -87,10 +87,7 @@ void main() {
     test('rejects LLM output that still exposes secrets', () {
       const input =
           "Hello Shakhzod, Your API key is AIWHHQOSOWBWHJ18HWJAJ78BWO8JWOM.";
-      expect(
-        service.isAcceptableLlmScrubForTest(input, input),
-        isFalse,
-      );
+      expect(service.isAcceptableLlmScrubForTest(input, input), isFalse);
     });
 
     test('accepts inline redaction that keeps scam keywords', () {
@@ -118,25 +115,22 @@ void main() {
       verifyNever(llama.generate(any));
     });
 
-    test(
-      'falls back to regex when LLM returns secrets unchanged',
-      () async {
-        wireHealthyEnv();
-        const input =
-            "Hello Shakhzod, it's a pleasure. "
-            'Your API key is AIWHHQOSOWBWHJ18HWJAJ78BWO8JWOM.';
-        when(llama.generate(any)).thenAnswer(
-          (_) async => LlamaResponse(text: input),
-        );
+    test('falls back to regex when LLM returns secrets unchanged', () async {
+      wireHealthyEnv();
+      const input =
+          "Hello Shakhzod, it's a pleasure. "
+          'Your API key is AIWHHQOSOWBWHJ18HWJAJ78BWO8JWOM.';
+      when(
+        llama.generate(any),
+      ).thenAnswer((_) async => LlamaResponse(text: input));
 
-        final out = await service.scrubPii(input);
+      final out = await service.scrubPii(input);
 
-        expect(out, contains('Hello [REDACTED_NAME]'));
-        expect(out, contains('[REDACTED_SECRET]'));
-        expect(out, isNot(contains('Shakhzod')));
-        expect(out, isNot(contains('AIWHHQOSOWBWHJ18HWJAJ78BWO8JWOM')));
-      },
-    );
+      expect(out, contains('Hello [REDACTED_NAME]'));
+      expect(out, contains('[REDACTED_SECRET]'));
+      expect(out, isNot(contains('Shakhzod')));
+      expect(out, isNot(contains('AIWHHQOSOWBWHJ18HWJAJ78BWO8JWOM')));
+    });
 
     test(
       'falls back to regex when LLM replaces the opening with [REDACTED]',
@@ -144,7 +138,8 @@ void main() {
         wireHealthyEnv();
         when(llama.generate(any)).thenAnswer(
           (_) async => const LlamaResponse(
-            text: '[REDACTED] has been issued a warrant for your arrest due '
+            text:
+                '[REDACTED] has been issued a warrant for your arrest due '
                 'to unpaid taxes. Pay \$4,250 today via gift cards to avoid '
                 'legal action. Contact agent Smith immediately.',
           ),
@@ -193,8 +188,9 @@ void main() {
         'Final Notice from IRS: Contact agent Smith about taxes.',
       );
 
-      final captured = verify(llama.generate(captureAny)).captured.single
-          as GenerationParams;
+      final captured =
+          verify(llama.generate(captureAny)).captured.single
+              as GenerationParams;
       expect(captured.prompt, contains('<|im_start|>user'));
       expect(
         captured.prompt,
@@ -208,9 +204,7 @@ void main() {
   group('LocalPiiRedactionService.stripChatMlArtifactsForTest', () {
     test('removes ChatML markers', () {
       expect(
-        service.stripChatMlArtifactsForTest(
-          'assistant\nHello world<|im_end|>',
-        ),
+        service.stripChatMlArtifactsForTest('assistant\nHello world<|im_end|>'),
         'Hello world',
       );
     });
