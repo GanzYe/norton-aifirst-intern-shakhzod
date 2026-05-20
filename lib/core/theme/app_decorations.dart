@@ -10,7 +10,6 @@ abstract final class AppDecorations {
     final border = OutlineInputBorder(
       borderRadius: AppRadius.mdAll,
       borderSide: const BorderSide(
-        color: AppColors.borderBlack,
         width: AppSizes.borderMedium,
       ),
     );
@@ -26,7 +25,6 @@ abstract final class AppDecorations {
       focusedBorder: OutlineInputBorder(
         borderRadius: AppRadius.mdAll,
         borderSide: const BorderSide(
-          color: AppColors.borderBlack,
           width: AppSizes.borderThick,
         ),
       ),
@@ -85,7 +83,6 @@ abstract final class AppDecorations {
         color: selected
             ? AppColors.nortonYellow
             : AppColors.resolveBorder(incognito: incognito),
-        width: AppSizes.borderThin,
       ),
     );
   }

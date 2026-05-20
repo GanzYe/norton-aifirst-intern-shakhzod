@@ -143,7 +143,7 @@ class _SplashScreenState extends State<SplashScreen>
                               opacity: _taglineOpacity,
                               child: SlideTransition(
                                 position: _taglineSlide,
-                                child: Text(
+                                child: const Text(
                                   AppBranding.tagline,
                                   textAlign: TextAlign.center,
                                   style: AppTextStyles.splashSubtitle,
@@ -160,7 +160,7 @@ class _SplashScreenState extends State<SplashScreen>
                       bottom: AppSpacing.splashFooterBottom,
                       child: FadeTransition(
                         opacity: _footerOpacity,
-                        child: Text(
+                        child: const Text(
                           AppBranding.attribution,
                           textAlign: TextAlign.center,
                           style: AppTextStyles.splashFooter,
@@ -222,7 +222,6 @@ class _SplashLogoStage extends StatelessWidget {
               scale: logoScale,
               child: const SmdLogo(
                 size: AppSizes.logoSplash,
-                semanticLabel: AppBranding.name,
               ),
             ),
           ),

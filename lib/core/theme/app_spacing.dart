@@ -40,7 +40,6 @@ abstract final class AppSpacing {
   );
   static const EdgeInsets inputInlineButton = EdgeInsets.symmetric(
     horizontal: md,
-    vertical: 0,
   );
   static const double inputActionsGap = xs;
 

@@ -11,7 +11,7 @@ final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 
 @Riverpod(keepAlive: true)
 GoRouter appRouter(AppRouterRef ref) {
-  AppNotifications.bindNavigator(rootNavigatorKey);
+  AppNotifications.navigatorKey = rootNavigatorKey;
 
   return GoRouter(
     navigatorKey: rootNavigatorKey,

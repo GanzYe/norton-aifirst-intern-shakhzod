@@ -34,8 +34,7 @@ abstract final class AppTheme {
       shape: RoundedRectangleBorder(
         borderRadius: AppRadius.lgAll,
         side: const BorderSide(
-          color: AppColors.borderBlack,
-          width: AppSizes.borderThin,
+          
         ),
       ),
       margin: EdgeInsets.zero,
@@ -47,7 +46,6 @@ abstract final class AppTheme {
         foregroundColor: AppColors.textPrimary,
         disabledForegroundColor: AppColors.disabledTextPrimary,
         side: const BorderSide(
-          color: AppColors.borderBlack,
           width: AppSizes.borderThick,
         ),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
@@ -56,6 +54,6 @@ abstract final class AppTheme {
     ),
   );
 
-  /// Incognito uses the same light theme; privacy mode only tints individual widgets.
+  /// Incognito uses the same light theme; privacy mode only tints widgets.
   static ThemeData resolve({required bool incognito}) => light;
 }

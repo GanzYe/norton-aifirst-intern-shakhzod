@@ -1,6 +1,7 @@
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
-/// Keeps the app process alive while scam analysis runs (Android foreground service).
+/// Keeps the app process alive while scam analysis runs (Android foreground
+/// service).
 @pragma('vm:entry-point')
 void analysisForegroundTaskCallback() {
   FlutterForegroundTask.setTaskHandler(_AnalysisForegroundTaskHandler());

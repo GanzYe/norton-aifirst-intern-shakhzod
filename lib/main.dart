@@ -9,7 +9,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   FlutterForegroundTask.initCommunicationPort();
 
-  AppNotifications.bindNavigator(rootNavigatorKey);
+  AppNotifications.navigatorKey = rootNavigatorKey;
   await AppNotifications.initialize();
   await AppNotifications.captureLaunchNotification();
 

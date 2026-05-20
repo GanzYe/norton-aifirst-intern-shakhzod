@@ -24,7 +24,9 @@ abstract final class AppNotifications {
   static bool _initialized = false;
   static bool _openHomeOnLaunch = false;
 
-  static void bindNavigator(GlobalKey<NavigatorState> key) {
+  static GlobalKey<NavigatorState>? get navigatorKey => _navigatorKey;
+
+  static set navigatorKey(GlobalKey<NavigatorState> key) {
     _navigatorKey = key;
   }
 
@@ -35,9 +37,7 @@ abstract final class AppNotifications {
 
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const darwin = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
+      
     );
     const settings = InitializationSettings(
       android: android,
@@ -77,7 +77,8 @@ abstract final class AppNotifications {
     }
   }
 
-  /// Consumed by [GoRouter.redirect] to skip splash when opened from a notification.
+  /// Consumed by the app router redirect to skip splash when opened from a
+  /// notification.
   static bool consumeOpenHomeOnLaunch() {
     if (!_openHomeOnLaunch) {
       return false;
@@ -109,8 +110,8 @@ abstract final class AppNotifications {
     await _show(
       id: modelDownloadNotificationId,
       title: '${AppBranding.name} model ready',
-      body:
-          'On-device AI is installed. Incognito mode is ready for private analysis.',
+      body: 'On-device AI is installed. Incognito mode is ready for '
+          'private analysis.',
     );
   }
 
@@ -171,10 +172,9 @@ abstract final class AppNotifications {
         _channelName,
         channelDescription: _channelDescription,
         icon: '@mipmap/ic_launcher',
-        largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
+        largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
         importance: Importance.high,
         priority: Priority.high,
-        autoCancel: true,
         category: AndroidNotificationCategory.status,
         visibility: NotificationVisibility.public,
       ),

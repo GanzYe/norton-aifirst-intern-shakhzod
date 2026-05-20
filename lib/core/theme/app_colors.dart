@@ -13,7 +13,7 @@ abstract final class AppColors {
   static const Color suspiciousOrange = Color(0xFFEF6C00);
   static const Color dangerousRed = Color(0xFFC62828);
 
-  // Incognito = subtle warm privacy accent on the light theme (not full dark mode).
+  // Incognito: subtle warm privacy accent on the light theme (not dark mode).
   static const Color surfaceIncognitoAccent = Color(0xFFFFFBF3);
   static const Color surfaceElevatedIncognitoAccent = Color(0xFFFFF6DC);
   static const Color borderIncognitoAccent = Color(0xFFE8D48A);
@@ -34,7 +34,7 @@ abstract final class AppColors {
   static const double opacityWarningFill = 0.14;
   static const double opacityGlowSoft = 0.12;
   static const double opacityGlowStrong = 0.35;
-  static const double opacitySweepFade = 0.0;
+  static const double opacitySweepFade = 0;
   static const double opacityLoaderMesh = 0.52;
   static const double opacityLoaderMeshLight = 0.42;
 

@@ -75,7 +75,7 @@ class BackgroundWorkCoordinator {
     switch (update.status) {
       case TaskStatus.complete:
         _ref.read(modelDownloadProgressProvider.notifier).state = null;
-        _ref.read(incognitoModeControllerProvider.notifier).setEnabled(true);
+        _ref.read(incognitoModeControllerProvider.notifier).enable();
         final inForeground = await FlutterForegroundTask.isAppOnForeground;
         if (!inForeground) {
           await AppNotifications.showModelDownloadComplete();
@@ -109,14 +109,10 @@ class BackgroundWorkCoordinator {
         onlyAlertOnce: true,
       ),
       iosNotificationOptions: const IOSNotificationOptions(
-        showNotification: true,
-        playSound: false,
+        
       ),
       foregroundTaskOptions: ForegroundTaskOptions(
         eventAction: ForegroundTaskEventAction.nothing(),
-        autoRunOnBoot: false,
-        autoRunOnMyPackageReplaced: false,
-        allowWakeLock: true,
         allowWifiLock: true,
       ),
     );
