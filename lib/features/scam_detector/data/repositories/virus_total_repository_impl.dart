@@ -43,25 +43,31 @@ class VirusTotalRepositoryImpl implements VirusTotalRepository {
       }
       PipelineLog.info(
         _stage,
-        'submission accepted, fetching report',
+        'submission accepted, fetching analysis report',
         context: {'analysisId': analysisId},
       );
 
+      // POST /urls returns an *analysis* id (`u-<sha>-<timestamp>`), which
+      // must be queried against `/analyses/{id}` — not `/urls/{id}`. The
+      // `/urls/{id}` endpoint expects a base64url-encoded URL id and will
+      // 400 with "Wrong URL id" if you hand it an analysis id.
       final reportResponse = await _dio.get<Map<String, dynamic>>(
-        '/urls/$analysisId',
+        '/analyses/$analysisId',
       );
 
       final reportStatus = reportResponse.statusCode;
       if (reportStatus == null || reportStatus < 200 || reportStatus >= 300) {
         final exc = VirusTotalRepositoryException(
-          _messageFromBody(reportResponse.data, 'URL report fetch failed.'),
+          _messageFromBody(reportResponse.data, 'Analysis report fetch failed.'),
           statusCode: reportStatus,
         );
         PipelineLog.failure(_stage, exc, context: {'status': reportStatus});
         throw exc;
       }
 
-      final stats = reportResponse.data?['data']?['attributes']?['last_analysis_stats']
+      // `/analyses/{id}` returns `data.attributes.stats` (not
+      // `last_analysis_stats`, which lives on the URL object).
+      final stats = reportResponse.data?['data']?['attributes']?['stats']
           as Map<String, dynamic>?;
 
       final malicious = (stats?['malicious'] as num?)?.toInt() ?? 0;

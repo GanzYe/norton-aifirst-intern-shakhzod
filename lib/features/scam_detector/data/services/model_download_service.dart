@@ -16,9 +16,12 @@ class ModelDownloadException implements Exception {
 class ModelDownloadService {
   ModelDownloadService({Dio? dio}) : _dio = dio ?? _createDownloadDio();
 
+  static const modelDisplayName = 'Qwen2.5-1.5B-Instruct';
+
   static const _modelUrl =
-      'https://huggingface.co/Qwen/Qwen2-0.5B-Instruct-GGUF/resolve/main/qwen2-0_5b-instruct-q4_k_m.gguf';
-  static const _fileName = 'qwen2-0_5b-instruct-q4_k_m.gguf';
+      'https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/'
+      'qwen2.5-1.5b-instruct-q4_k_m.gguf';
+  static const _fileName = 'qwen2.5-1.5b-instruct-q4_k_m.gguf';
 
   final Dio _dio;
 

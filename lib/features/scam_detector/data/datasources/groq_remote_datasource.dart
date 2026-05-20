@@ -120,6 +120,7 @@ Rules:
         throw const FormatException('Expected JSON object');
       }
       final dto = ScamAnalysisDto.fromJson(decoded);
+      PipelineLog.modelResponse(source: 'GROQ', response: text);
       PipelineLog.done(
         _stage,
         message: 'verdict received',

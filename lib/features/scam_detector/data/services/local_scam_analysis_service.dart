@@ -11,7 +11,7 @@ import 'package:scam_message_detector/features/scam_detector/data/services/model
 import 'package:scam_message_detector/features/scam_detector/domain/entities/risk_level.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/scam_analysis.dart';
 
-// Qwen2-Instruct expects the ChatML template. Skipping it on a 0.5B model
+// Qwen2.5-Instruct expects the ChatML template. Skipping it makes smaller models
 // makes it ignore "respond with JSON" instructions and emit free-form prose.
 const _imStart = '<|im_start|>';
 const _imEnd = '<|im_end|>';
@@ -32,8 +32,10 @@ const _fewShotUser =
 const _fewShotAssistant =
     '{"risk_level":"DANGEROUS","confidence":92,"explanation":"Urgent account-suspension wording paired with a suspicious .tk login link is a classic phishing pattern aimed at stealing credentials."}';
 
-// Keep the user message comfortably inside the 2048-token context so the
+// Keep the user message comfortably inside the 4096-token context so the
 // native llama backend doesn't `ggml_abort` mid-decode on long inputs.
+// EML bodies regularly tokenize close to 1 char/token (URLs, headers,
+// base64), so even with the larger window we still cap the user chunk.
 const _maxInputChars = 1600;
 
 class LocalScamAnalysisException implements Exception {
@@ -68,9 +70,6 @@ class LocalScamAnalysisService {
   final ModelDownloadService _modelDownload;
   final LlamaNativeProbe _nativeProbe;
 
-  bool _modelLoaded = false;
-  String? _loadedFromPath;
-
   Future<bool> isUsable() async {
     if (!await _modelDownload.isModelDownloaded()) return false;
     return _nativeProbe.isAvailable();
@@ -93,9 +92,11 @@ class LocalScamAnalysisService {
       throw exc;
     }
 
+    var loaded = false;
     try {
       final modelPath = await _modelDownload.getModelPath();
-      await _ensureModelLoaded(modelPath);
+      await _loadModelFresh(modelPath);
+      loaded = true;
 
       final prompt = _buildChatMlPrompt(message);
       PipelineLog.info(
@@ -121,6 +122,7 @@ class LocalScamAnalysisService {
       // native worker dying silently mid-flight.
       final response = await _llama.generate(params).timeout(_generateTimeout);
       final raw = response.text.trim();
+      PipelineLog.modelResponse(source: 'LLAMA_LOCAL', response: raw);
       if (raw.isEmpty) {
         const exc = LocalScamAnalysisException(
           'Empty response from local model.',
@@ -140,7 +142,6 @@ class LocalScamAnalysisService {
       );
       return parsed;
     } on LocalScamAnalysisException {
-      _resetLoadState();
       rethrow;
     } on TimeoutException catch (e, stack) {
       developer.log(
@@ -153,7 +154,6 @@ class LocalScamAnalysisService {
         'On-device analysis took too long. Please try again.',
       );
       PipelineLog.failure(_stage, exc, stackTrace: stack, message: 'timeout');
-      _resetLoadState();
       throw exc;
     } on Object catch (e, stack) {
       developer.log(
@@ -163,34 +163,49 @@ class LocalScamAnalysisService {
         stackTrace: stack,
       );
       PipelineLog.failure(_stage, e, stackTrace: stack);
-      _resetLoadState();
       throw const LocalScamAnalysisException(
         "Couldn't run on-device analysis. Please try again.",
       );
+    } finally {
+      // ALWAYS tear the native context down at the end of a call, even on
+      // success. flutter_llama 1.1.2's `generate()` never clears the KV
+      // cache between invocations (see flutter_llama_bridge.cpp), so the
+      // *next* `generate()` — from this service or the sibling PII
+      // service — would otherwise collide with leftover KV slots and
+      // trip `ggml_abort` natively (uncatchable SIGABRT).
+      if (loaded) {
+        await _safeUnload();
+      }
     }
   }
 
-  Future<void> _ensureModelLoaded(String modelPath) async {
-    if (_modelLoaded && _loadedFromPath == modelPath) {
-      PipelineLog.info(_stage, 'model already loaded; reusing context');
-      return;
-    }
-
+  Future<void> _loadModelFresh(String modelPath) async {
     PipelineLog.info(
       _stage,
       'loading GGUF model into CPU backend',
-      context: {'contextSize': 2048, 'batchSize': 256, 'threads': 4},
+      context: {'contextSize': 4096, 'batchSize': 4096, 'threads': 4},
     );
     // CPU-only inference. flutter_llama's Vulkan/OpenCL backends trigger
     // ggml_abort during decode on a number of Android devices.
+    //
+    // contextSize=4096: 2x headroom over the 2048 default. Both the PII
+    // and scam services share `FlutterLlama.instance`, so the loaded
+    // config must be consistent across them.
+    //
+    // batchSize=4096 (== contextSize) is MANDATORY: flutter_llama 1.1.2's
+    // native bridge dumps the entire tokenized prompt into a single
+    // `llama_batch` (flutter_llama_bridge.cpp:154). If the batch exceeds
+    // n_batch, llama.cpp's `llama_context::decode` hits a GGML_ASSERT
+    // and aborts the process — that's the SIGABRT we kept seeing on
+    // scam prompts >256 tokens.
     final loaded = await _llama
         .loadModel(
           LlamaConfig(
             modelPath: modelPath,
             nThreads: 4,
             nGpuLayers: 0,
-            contextSize: 2048,
-            batchSize: 256,
+            contextSize: 4096,
+            batchSize: 4096,
             useGpu: false,
             verbose: false,
           ),
@@ -199,14 +214,20 @@ class LocalScamAnalysisService {
     if (!loaded) {
       throw const LocalScamAnalysisException('Failed to load local model.');
     }
-    _modelLoaded = true;
-    _loadedFromPath = modelPath;
     PipelineLog.info(_stage, 'model loaded');
   }
 
-  void _resetLoadState() {
-    _modelLoaded = false;
-    _loadedFromPath = null;
+  Future<void> _safeUnload() async {
+    try {
+      await _llama.unloadModel();
+    } on Object catch (e, stack) {
+      developer.log(
+        'unloadModel() failed after scam analysis; ignoring',
+        name: 'LocalScamAnalysisService',
+        error: e,
+        stackTrace: stack,
+      );
+    }
   }
 
   String _buildChatMlPrompt(String message) {
@@ -247,7 +268,7 @@ class LocalScamAnalysisService {
     final fromJson = _tryParseJson(cleaned);
     if (fromJson != null) return fromJson;
 
-    // The 0.5B model regularly drops the JSON contract and emits
+    // The on-device model may still drop the JSON contract and emit
     // `LABEL: explanation` instead — recover the verdict from that shape
     // rather than failing the whole offline path.
     final fromText = _tryParseLabelled(cleaned);

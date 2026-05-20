@@ -47,6 +47,7 @@ class GeminiRemoteDataSource {
       }
 
       final dto = ScamAnalysisDto.fromJson(decoded);
+      PipelineLog.modelResponse(source: 'GEMINI', response: text);
       PipelineLog.done(
         _stage,
         message: 'verdict received',
