@@ -307,6 +307,25 @@ When I start a new Cursor task, I rely on `.cursorrules` for consistency; for on
 
 ---
 
+## Git commits with [git-agent](https://github.com/GitAgentHQ/git-agent-cli)
+
+Besides Cursor for writing code, I use **[git-agent](https://github.com/GitAgentHQ/git-agent-cli)** when I commit. It uses AI to look at your changed files, compare them, and write the commit title and description for you.
+
+I do not like thinking up commit names. Writing a clear title and a short description used to take me a long time. In my experience, **git-agent does this very well** — the subject and body usually match what I changed and are easy to read. I still check the diff before I commit, but I save a lot of time.
+
+Another useful feature: from the context of the changes, git-agent can **split work into several commits** and group files by logic (for example, UI changes in one commit and tests in another), instead of one big commit with everything mixed together.
+
+Typical workflow:
+
+```bash
+git add .
+git-agent commit
+```
+
+Install the CLI from the [releases page](https://github.com/GitAgentHQ/git-agent-cli/releases) and set up a provider once (`git-agent init`). On Windows I used the `git-agent-windows-amd64` build and added it to my user `PATH`.
+
+---
+
 ## AI Interaction Log
 
 Below are **seven real prompts** from my Cursor chats during this project. I did not copy AI output blindly — I reviewed, tested, and often sent follow-up prompts to fix wrong suggestions.
