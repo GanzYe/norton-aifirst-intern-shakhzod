@@ -7,3 +7,8 @@ analyzer:
   errors:
     invalid_annotation_target: ignore
     public_member_api_docs: ignore
+
+linter:
+  rules:
+    # Single-method repository interfaces are intentional (clean architecture).
+    one_member_abstracts: false
