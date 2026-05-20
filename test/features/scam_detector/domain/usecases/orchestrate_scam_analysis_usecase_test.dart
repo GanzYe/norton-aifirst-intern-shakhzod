@@ -6,7 +6,6 @@ import 'package:scam_message_detector/features/scam_detector/domain/entities/ris
 import 'package:scam_message_detector/features/scam_detector/domain/entities/scam_analysis.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/soar_analysis_input.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/threat_intel_snapshot.dart';
-import 'package:scam_message_detector/features/scam_detector/domain/repositories/abuse_ipdb_repository.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/url_scan_repository.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/virus_total_repository.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/usecases/analyze_message_usecase.dart';

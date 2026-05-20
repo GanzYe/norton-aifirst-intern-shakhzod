@@ -4,13 +4,21 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/screens/home_screen.dart';
 
 void main() {
-  testWidgets('Home screen shows analyze UI', (tester) async {
+  testWidgets('Home screen shows analyze UI after user types', (tester) async {
     await tester.pumpWidget(
       const ProviderScope(child: MaterialApp(home: HomeScreen())),
     );
 
-    expect(find.text('Analyze'), findsOneWidget);
     expect(find.text('Try an example'), findsOneWidget);
     expect(find.textContaining('Paste a suspicious SMS'), findsOneWidget);
+    expect(find.text('.eml'), findsOneWidget);
+
+    expect(find.text('Analyze'), findsNothing);
+
+    await tester.enterText(find.byType(TextField), 'hello scam');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('Analyze'), findsOneWidget);
   });
 }

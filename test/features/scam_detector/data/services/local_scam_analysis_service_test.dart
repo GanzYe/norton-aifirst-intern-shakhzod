@@ -12,7 +12,7 @@ void main() {
   late MockLlamaNativeProbe probe;
   late LocalScamAnalysisService service;
 
-  const modelPath = '/data/user/0/app/files/qwen2-0_5b-instruct-q4_k_m.gguf';
+  const modelPath = '/data/user/0/app/files/qwen2.5-1.5b-instruct-q4_k_m.gguf';
 
   void wireHealthyEnv() {
     when(modelDownload.isModelDownloaded()).thenAnswer((_) async => true);
@@ -166,8 +166,15 @@ void main() {
       expect(result.explanation, isNotEmpty);
     });
 
-    test('caches loaded model — does not call loadModel twice for the same path',
+    test(
+        'reloads the model and unloads after every analyze() so the KV cache '
+        'stays clean (regression for ggml_abort SIGABRT on the second call)',
         () async {
+      // flutter_llama 1.1.2's native bridge never calls
+      // `llama_kv_cache_clear()` between independent generate() calls, so
+      // re-using a model load across calls trips `ggml_abort` inside
+      // `llama_context::decode`. Each analyze() must therefore do a full
+      // load/generate/unload cycle.
       wireHealthyEnv();
       when(llama.generate(any)).thenAnswer(
         (_) async => const LlamaResponse(
@@ -178,9 +185,55 @@ void main() {
       await service.analyze('one');
       await service.analyze('two');
 
-      verify(llama.loadModel(any)).called(1);
+      verify(llama.loadModel(any)).called(2);
       verify(llama.generate(any)).called(2);
+      verify(llama.unloadModel()).called(2);
     });
+
+    test(
+      'configures the model with a 4096-token context window',
+      () async {
+        wireHealthyEnv();
+        when(llama.generate(any)).thenAnswer(
+          (_) async => const LlamaResponse(
+            text: '{"risk_level":"SAFE","confidence":50,"explanation":"x"}',
+          ),
+        );
+
+        await service.analyze('hello');
+
+        final config =
+            verify(llama.loadModel(captureAny)).captured.single as LlamaConfig;
+        expect(config.contextSize, 4096);
+        expect(config.useGpu, isFalse);
+      },
+    );
+
+    test(
+      'sizes batchSize >= contextSize so single-batch prefill cannot overflow '
+      'n_batch (regression for ggml_abort SIGABRT on scam prompts >256 tokens)',
+      () async {
+        // flutter_llama 1.1.2's native bridge submits the whole prompt as
+        // ONE `llama_batch` (see flutter_llama_bridge.cpp:154). When the
+        // batch is larger than n_batch, llama.cpp hits a GGML_ASSERT
+        // inside `llama_context::decode` and the process aborts. The
+        // ChatML-wrapped scam prompt (system + few-shot + user) is
+        // always larger than 256 tokens, so batchSize=256 reliably
+        // crashed the app — keep this assertion to prevent regression.
+        wireHealthyEnv();
+        when(llama.generate(any)).thenAnswer(
+          (_) async => const LlamaResponse(
+            text: '{"risk_level":"SAFE","confidence":50,"explanation":"x"}',
+          ),
+        );
+
+        await service.analyze('hello');
+
+        final config =
+            verify(llama.loadModel(captureAny)).captured.single as LlamaConfig;
+        expect(config.batchSize, greaterThanOrEqualTo(config.contextSize));
+      },
+    );
   });
 
   group('LocalScamAnalysisService.analyze — failure paths', () {

@@ -22,22 +22,16 @@ void main() {
     test('maps confidence and report count into AbuseIpdbResult', () async {
       adapter.onGet(
         '/check',
-        (server) => server.reply(
-          200,
-          {
-            'data': {
-              'ipAddress': testIp,
-              'abuseConfidenceScore': 87,
-              'totalReports': 41,
-              'isPublic': true,
-              'countryCode': 'NL',
-            },
+        (server) => server.reply(200, {
+          'data': {
+            'ipAddress': testIp,
+            'abuseConfidenceScore': 87,
+            'totalReports': 41,
+            'isPublic': true,
+            'countryCode': 'NL',
           },
-        ),
-        queryParameters: {
-          'ipAddress': testIp,
-          'maxAgeInDays': 90,
-        },
+        }),
+        queryParameters: {'ipAddress': testIp, 'maxAgeInDays': 90},
       );
 
       final result = await repository.checkIp(testIp);
@@ -50,20 +44,14 @@ void main() {
     test('clean IP returns zeros without throwing', () async {
       adapter.onGet(
         '/check',
-        (server) => server.reply(
-          200,
-          {
-            'data': {
-              'ipAddress': testIp,
-              'abuseConfidenceScore': 0,
-              'totalReports': 0,
-            },
+        (server) => server.reply(200, {
+          'data': {
+            'ipAddress': testIp,
+            'abuseConfidenceScore': 0,
+            'totalReports': 0,
           },
-        ),
-        queryParameters: {
-          'ipAddress': testIp,
-          'maxAgeInDays': 90,
-        },
+        }),
+        queryParameters: {'ipAddress': testIp, 'maxAgeInDays': 90},
       );
 
       final result = await repository.checkIp(testIp);
@@ -78,10 +66,7 @@ void main() {
       adapter.onGet(
         '/check',
         (server) => server.reply(200, {'errors': []}),
-        queryParameters: {
-          'ipAddress': testIp,
-          'maxAgeInDays': 90,
-        },
+        queryParameters: {'ipAddress': testIp, 'maxAgeInDays': 90},
       );
 
       expect(
@@ -105,10 +90,7 @@ void main() {
             type: DioExceptionType.badResponse,
           ),
         ),
-        queryParameters: {
-          'ipAddress': testIp,
-          'maxAgeInDays': 90,
-        },
+        queryParameters: {'ipAddress': testIp, 'maxAgeInDays': 90},
       );
 
       expect(
@@ -126,18 +108,12 @@ void main() {
     test('429 status response throws with status code propagated', () async {
       adapter.onGet(
         '/check',
-        (server) => server.reply(
-          429,
-          {
-            'errors': [
-              {'detail': 'Too many requests'},
-            ],
-          },
-        ),
-        queryParameters: {
-          'ipAddress': testIp,
-          'maxAgeInDays': 90,
-        },
+        (server) => server.reply(429, {
+          'errors': [
+            {'detail': 'Too many requests'},
+          ],
+        }),
+        queryParameters: {'ipAddress': testIp, 'maxAgeInDays': 90},
       );
 
       expect(

@@ -27,21 +27,25 @@ void main() {
           {
             'data': {
               'id': 'u-test-analysis-id-abc123',
-              'type': 'url',
+              'type': 'analysis',
             },
           },
         ),
         data: {'url': testUrl},
       );
 
+      // The analysis id returned by POST /urls must be queried against
+      // /analyses/{id} and read as `attributes.stats` — querying
+      // /urls/{analysis_id} would 400 with "Wrong URL id".
       adapter.onGet(
-        '/urls/u-test-analysis-id-abc123',
+        '/analyses/u-test-analysis-id-abc123',
         (server) => server.reply(
           200,
           {
             'data': {
               'attributes': {
-                'last_analysis_stats': {
+                'status': 'completed',
+                'stats': {
                   'malicious': 5,
                   'suspicious': 1,
                   'harmless': 60,
@@ -59,6 +63,57 @@ void main() {
       expect(result.maliciousCount, 5);
       expect(result.totalEngines, 76);
     });
+
+    test(
+      'regression: uses /analyses/{id} (not /urls/{id}) for analysis lookup',
+      () async {
+        adapter.onPost(
+          '/urls',
+          (server) => server.reply(
+            200,
+            {
+              'data': {
+                'id': 'u-regression-id',
+                'type': 'analysis',
+              },
+            },
+          ),
+          data: {'url': testUrl},
+        );
+        // Simulate the real VT behavior: /urls/{analysis_id} would 400.
+        adapter.onGet(
+          '/urls/u-regression-id',
+          (server) => server.reply(
+            400,
+            {
+              'error': {
+                'code': 'WrongUrlIdError',
+                'message': 'Wrong URL id: u-regression-id',
+              },
+            },
+          ),
+        );
+        adapter.onGet(
+          '/analyses/u-regression-id',
+          (server) => server.reply(
+            200,
+            {
+              'data': {
+                'attributes': {
+                  'status': 'completed',
+                  'stats': {'malicious': 2, 'harmless': 70},
+                },
+              },
+            },
+          ),
+        );
+
+        final result = await repository.scanUrl(testUrl);
+
+        expect(result.maliciousCount, 2);
+        expect(result.totalEngines, 72);
+      },
+    );
 
     test('throws VirusTotalRepositoryException on 429 without crashing',
         () async {
