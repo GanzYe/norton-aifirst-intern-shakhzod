@@ -59,7 +59,9 @@ class _LogEntryTileState extends State<_LogEntryTile> {
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: AppRadius.smAll,
-        border: Border.all(color: AppColors.borderBlack.withValues(alpha: 0.12)),
+        border: Border.all(
+          color: AppColors.borderBlack.withValues(alpha: 0.12),
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -87,7 +89,7 @@ class _LogEntryTileState extends State<_LogEntryTile> {
             const SizedBox(height: 2),
             SelectableText(
               entry.summaryLine,
-              style: TextStyle(
+              style: const TextStyle(
                 fontFamily: 'monospace',
                 fontSize: 11,
                 height: 1.35,
@@ -112,7 +114,9 @@ class _LogEntryTileState extends State<_LogEntryTile> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        _detailExpanded ? 'Hide full payload' : 'Show full payload',
+                        _detailExpanded
+                            ? 'Hide full payload'
+                            : 'Show full payload',
                         style: AppTextStyles.homeSubtitle.copyWith(
                           fontSize: 11,
                           color: AppColors.textMuted,
