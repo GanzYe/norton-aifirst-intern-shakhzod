@@ -1,5 +1,7 @@
 import 'dart:developer' as developer;
 
+import 'package:scam_message_detector/core/logging/pipeline_log_entry.dart';
+
 /// Centralized, stage-aware logger for the SOAR scam-detection pipeline.
 ///
 /// Every service in the analysis pipeline emits trace events through this
@@ -26,6 +28,25 @@ import 'dart:developer' as developer;
 /// where TAG is one of START / DONE / INFO / WARN / FAIL.
 abstract final class PipelineLog {
   static const _name = 'PipelineLog';
+
+  static List<PipelineLogEntry>? _capture;
+
+  /// Starts collecting log entries for the current analysis (shown in UI).
+  static void beginCapture() {
+    _capture = [];
+  }
+
+  /// Returns captured entries and stops collection.
+  static List<PipelineLogEntry> takeCapture() {
+    final entries = List<PipelineLogEntry>.unmodifiable(_capture ?? const []);
+    _capture = null;
+    return entries;
+  }
+
+  /// Clears an in-progress capture without returning entries (e.g. on error).
+  static void discardCapture() {
+    _capture = null;
+  }
 
   /// Pipeline stage entered. Pair with [done] or [failure].
   static void start(String stage, {Map<String, Object?>? context}) {
@@ -109,6 +130,14 @@ abstract final class PipelineLog {
   }
 
   static void _logFullBody(String stage, String label, String body) {
+    _record(
+      PipelineLogEntry(
+        tag: 'INFO',
+        stage: stage,
+        message: '$label (${body.length} chars)',
+        detail: body,
+      ),
+    );
     developer.log(
       '[$stage] $label (${body.length} chars):\n$body',
       name: _name,
@@ -178,13 +207,34 @@ abstract final class PipelineLog {
           context.entries.map((e) => '${e.key}=${_fmt(e.value)}').join(', '),
         );
     }
+    final line = buf.toString();
+    _record(
+      PipelineLogEntry(
+        tag: tag,
+        stage: stage,
+        message: message,
+        context: _stringifyContext(context),
+        error: error?.toString(),
+      ),
+    );
     developer.log(
-      buf.toString(),
+      line,
       name: _name,
       error: error,
       stackTrace: stackTrace,
       level: level,
     );
+  }
+
+  static void _record(PipelineLogEntry entry) {
+    _capture?.add(entry);
+  }
+
+  static Map<String, String>? _stringifyContext(Map<String, Object?>? context) {
+    if (context == null || context.isEmpty) return null;
+    return {
+      for (final e in context.entries) e.key: _fmt(e.value),
+    };
   }
 
   static String _fmt(Object? value) {
