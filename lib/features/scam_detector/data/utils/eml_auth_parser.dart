@@ -1,6 +1,7 @@
 import 'package:scam_message_detector/features/scam_detector/domain/entities/email_auth_alignment.dart';
 
-/// Parses SPF, DKIM, and DMARC from Authentication-Results via regex alignment checks.
+/// Parses SPF, DKIM, and DMARC from Authentication-Results via regex alignment
+/// checks.
 abstract final class EmlAuthParser {
   static final _spfPattern = RegExp(
     r'\bspf\s*=\s*(pass|fail|neutral|softfail|permerror|temperror|none)\b',

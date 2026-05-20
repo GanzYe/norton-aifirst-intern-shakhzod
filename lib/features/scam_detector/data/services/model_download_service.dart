@@ -48,7 +48,6 @@ class ModelDownloadService {
       taskId: backgroundTaskId,
       url: modelUrl,
       filename: fileName,
-      baseDirectory: BaseDirectory.applicationDocuments,
       updates: Updates.statusAndProgress,
       allowPause: true,
       retries: 3,
@@ -96,8 +95,8 @@ class ModelDownloadService {
         },
       );
 
-      if (await file.exists()) {
-        await file.delete();
+      if (file.existsSync()) {
+        file.deleteSync();
       }
       await tempFile.rename(file.path);
 
@@ -130,8 +129,8 @@ class ModelDownloadService {
   }
 
   Future<void> _deleteIfExists(File file) async {
-    if (await file.exists()) {
-      await file.delete();
+    if (file.existsSync()) {
+      file.deleteSync();
     }
   }
 }

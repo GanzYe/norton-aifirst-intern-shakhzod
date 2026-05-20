@@ -73,7 +73,7 @@ class AppModalDialog extends StatelessWidget {
         decoration: BoxDecoration(
           color: _background,
           borderRadius: AppRadius.lgAll,
-          border: Border.all(color: AppColors.borderBlack),
+          border: Border.all(),
           boxShadow: const [
             BoxShadow(
               color: AppColors.shadow,
@@ -96,7 +96,6 @@ class AppModalDialog extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Icon(
                           _resolvedIcon,
@@ -174,7 +173,7 @@ class _ActionRow extends StatelessWidget {
       onPressed: action.onPressed,
       style: OutlinedButton.styleFrom(
         backgroundColor: AppColors.surface,
-        side: const BorderSide(color: AppColors.borderBlack),
+        side: const BorderSide(),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
         textStyle: AppTextStyles.analyzeButton,
       ),

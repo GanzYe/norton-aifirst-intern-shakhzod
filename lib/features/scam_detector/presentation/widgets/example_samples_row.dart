@@ -6,13 +6,13 @@ import 'package:scam_message_detector/core/theme/app_spacing.dart';
 import 'package:scam_message_detector/core/theme/app_text_styles.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/constants/example_messages.dart';
 
-/// Compact horizontal sample picker — replaces the tall stacked example tiles.
+/// Compact horizontal sample picker — replaces tall stacked example tiles.
 class ExampleSamplesRow extends StatelessWidget {
   const ExampleSamplesRow({
-    super.key,
     required this.incognito,
     required this.enabled,
     required this.onSampleTap,
+    super.key,
   });
 
   final bool incognito;

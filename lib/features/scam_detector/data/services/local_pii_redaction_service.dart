@@ -71,10 +71,10 @@ const _fewShotAssistantA =
     'Your API key is [REDACTED_SECRET].';
 
 const _fewShotUserB =
-    'Final Notice from IRS: Pay \$4,250 via gift cards. '
+    r'Final Notice from IRS: Pay $4,250 via gift cards. '
     'Contact agent Smith at john.doe@irs-scam.example or +1 (202) 555-0199.';
 const _fewShotAssistantB =
-    'Final Notice from IRS: Pay \$4,250 via gift cards. '
+    r'Final Notice from IRS: Pay $4,250 via gift cards. '
     'Contact agent [REDACTED_NAME] at [REDACTED_EMAIL] or [REDACTED_PHONE].';
 
 const _fewShotUserC =
@@ -144,9 +144,7 @@ class LocalPiiRedactionService implements PiiRedactionRepository {
         prompt: prompt,
         temperature: 0.1,
         topP: 0.9,
-        topK: 40,
         maxTokens: _maxOutputTokens,
-        repeatPenalty: 1.1,
         stopSequences: const [_imEnd, '<|endoftext|>'],
       );
 
@@ -192,12 +190,9 @@ class LocalPiiRedactionService implements PiiRedactionRepository {
   Future<void> _loadModelFresh(String modelPath) async {
     final config = LlamaConfig(
       modelPath: modelPath,
-      nThreads: 4,
-      nGpuLayers: 0,
       contextSize: 4096,
       batchSize: 4096,
       useGpu: false,
-      verbose: false,
     );
 
     final loaded = await _llama.loadModel(config).timeout(_loadTimeout);
@@ -295,7 +290,7 @@ class LocalPiiRedactionService implements PiiRedactionRepository {
   bool _preservesMessageWording(String input, String output) {
     final keywords = input
         .toLowerCase()
-        .split(RegExp(r'[^a-z0-9]+'))
+        .split(RegExp('[^a-z0-9]+'))
         .where((w) => w.length >= 4)
         .toSet();
     if (keywords.isEmpty) return true;

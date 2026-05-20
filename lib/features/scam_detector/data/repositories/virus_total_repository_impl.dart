@@ -68,13 +68,18 @@ class VirusTotalRepositoryImpl implements VirusTotalRepository {
 
       // `/analyses/{id}` returns `data.attributes.stats` (not
       // `last_analysis_stats`, which lives on the URL object).
-      final stats =
-          reportResponse.data?['data']?['attributes']?['stats']
-              as Map<String, dynamic>?;
+      final data = reportResponse.data?['data'];
+      final attributes = data is Map<String, dynamic>
+          ? data['attributes']
+          : null;
+      final stats = attributes is Map<String, dynamic>
+          ? attributes['stats']
+          : null;
+      final statsMap = stats is Map<String, dynamic> ? stats : null;
 
-      final malicious = (stats?['malicious'] as num?)?.toInt() ?? 0;
+      final malicious = (statsMap?['malicious'] as num?)?.toInt() ?? 0;
       final total =
-          stats?.values.whereType<num>().fold<int>(
+          statsMap?.values.whereType<num>().fold<int>(
             0,
             (sum, value) => sum + value.toInt(),
           ) ??
@@ -115,7 +120,10 @@ class VirusTotalRepositoryImpl implements VirusTotalRepository {
     if (id != null && id.isNotEmpty) {
       return id;
     }
-    final link = data['links']?['self'] as String?;
+    final links = data['links'];
+    final link = links is Map<String, dynamic>
+        ? links['self'] as String?
+        : null;
     if (link == null) {
       return null;
     }

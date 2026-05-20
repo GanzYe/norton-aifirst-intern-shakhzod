@@ -37,7 +37,7 @@ class IncognitoModeSwitch extends ConsumerWidget {
       decoration: BoxDecoration(
         color: surface,
         borderRadius: AppRadius.mdAll,
-        border: Border.all(color: border, width: 1),
+        border: Border.all(color: border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -121,13 +121,13 @@ class IncognitoModeSwitch extends ConsumerWidget {
     final controller = ref.read(incognitoModeControllerProvider.notifier);
 
     if (!value) {
-      controller.toggleOff();
+      controller.disable();
       return;
     }
 
     final service = ref.read(modelDownloadServiceProvider);
     if (await service.isModelDownloaded()) {
-      controller.setEnabled(true);
+      controller.enable();
       return;
     }
 
@@ -143,8 +143,8 @@ class IncognitoModeSwitch extends ConsumerWidget {
         message:
             'Incognito Mode uses an on-device AI model so your messages '
             'never leave the phone. The model is about 1 GB and downloads '
-            'in the background—you can close the app and we\'ll notify you '
-            'when it\'s ready.',
+            "in the background—you can close the app and we'll notify you "
+            "when it's ready.",
         actions: [
           AppModalAction(
             'Cancel',

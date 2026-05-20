@@ -8,13 +8,13 @@ import 'package:scam_message_detector/core/theme/app_radius.dart';
 import 'package:scam_message_detector/core/theme/app_sizes.dart';
 import 'package:scam_message_detector/core/theme/app_spacing.dart';
 import 'package:scam_message_detector/core/theme/app_text_styles.dart';
+import 'package:scam_message_detector/features/scam_detector/presentation/widgets/message_field_shell.dart' show MessageFieldShell;
 
 /// Aurora blobs behind centered copy. Fills [MessageFieldShell] — same size as
 /// the input field (no fixed height).
 class AnalysisLoadingIndicator extends StatefulWidget {
   const AnalysisLoadingIndicator({
-    super.key,
-    required this.incognito,
+    required this.incognito, super.key,
     this.animate = true,
     this.title = "We're analyzing your message",
     this.subtitle =
@@ -143,7 +143,6 @@ class _AnalysisLoadingIndicatorState extends State<AnalysisLoadingIndicator>
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
                     widget.title,
@@ -207,7 +206,7 @@ class _AuroraBlobsPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Card fill comes from [MessageFieldShell] decoration; only blobs painted here.
+    // Card fill comes from MessageFieldShell decoration; only blobs here.
     final blobs = <_Blob>[
       _Blob(
         AppColors.loaderGlow,

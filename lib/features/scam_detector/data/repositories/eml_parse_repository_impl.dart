@@ -13,7 +13,7 @@ class EmlParseRepositoryImpl implements EmlParseRepository {
 
     final bodyText =
         message.decodeTextPlainPart() ??
-        message.decodeTextHtmlPart()?.replaceAll(RegExp(r'<[^>]*>'), ' ') ??
+        message.decodeTextHtmlPart()?.replaceAll(RegExp('<[^>]*>'), ' ') ??
         '';
 
     return ParsedEmlContent(

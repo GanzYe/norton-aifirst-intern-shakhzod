@@ -113,7 +113,7 @@ abstract final class PiiRegexScrubber {
     return false;
   }
 
-  /// Removes stray initials left after scrubbing (e.g. "[REDACTED_NAME] l.").
+  /// Removes stray initials left after scrubbing (e.g. redacted name + " l.").
   static String _stripOrphanTypoTails(String text) {
     return text.replaceAll(
       RegExp(r'\[REDACTED_NAME\]\s+[a-z]{1,2}\b'),

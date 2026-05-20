@@ -10,7 +10,7 @@ abstract final class ExampleMessages {
     (
       title: 'Prize scam SMS',
       body:
-          'Congratulations! You won \$1,000,000 in the Norton Loyalty Draw. '
+          r'Congratulations! You won $1,000,000 in the Norton Loyalty Draw. '
           'Claim your prize now: bit.ly/prize-winner-claim. '
           'Reply STOP to opt out.',
     ),
@@ -18,7 +18,7 @@ abstract final class ExampleMessages {
       title: 'IRS impersonation',
       body:
           'Final Notice from IRS: A warrant has been issued for your arrest '
-          'due to unpaid taxes. Pay \$4,250 today via gift cards to avoid '
+          r'due to unpaid taxes. Pay $4,250 today via gift cards to avoid '
           'legal action. Contact agent Smith immediately.',
     ),
   ];

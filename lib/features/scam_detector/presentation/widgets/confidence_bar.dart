@@ -8,9 +8,7 @@ import 'package:scam_message_detector/features/scam_detector/domain/entities/ris
 
 class ConfidenceBar extends StatelessWidget {
   const ConfidenceBar({
-    super.key,
-    required this.confidence,
-    required this.riskLevel,
+    required this.confidence, required this.riskLevel, super.key,
   });
 
   final int confidence;

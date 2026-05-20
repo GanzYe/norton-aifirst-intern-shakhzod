@@ -11,8 +11,8 @@ import 'package:scam_message_detector/features/scam_detector/data/services/model
 import 'package:scam_message_detector/features/scam_detector/domain/entities/risk_level.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/scam_analysis.dart';
 
-// Qwen2.5-Instruct expects the ChatML template. Skipping it makes smaller models
-// makes it ignore "respond with JSON" instructions and emit free-form prose.
+// Qwen2.5-Instruct expects the ChatML template. Skipping it makes smaller
+// models ignore "respond with JSON" instructions and emit free-form prose.
 const _imStart = '<|im_start|>';
 const _imEnd = '<|im_end|>';
 
@@ -30,7 +30,9 @@ Definitions:
 const _fewShotUser =
     'Your account has been suspended. Click http://secure-login.example.tk to reactivate within 24h or lose access.';
 const _fewShotAssistant =
-    '{"risk_level":"DANGEROUS","confidence":92,"explanation":"Urgent account-suspension wording paired with a suspicious .tk login link is a classic phishing pattern aimed at stealing credentials."}';
+    '{"risk_level":"DANGEROUS","confidence":92,"explanation":'
+    '"Urgent account-suspension wording paired with a suspicious .tk login '
+    'link is a classic phishing pattern aimed at stealing credentials."}';
 
 // Keep the user message comfortably inside the 4096-token context so the
 // native llama backend doesn't `ggml_abort` mid-decode on long inputs.
@@ -111,7 +113,6 @@ class LocalScamAnalysisService {
         topP: 0.8,
         topK: 30,
         maxTokens: 220,
-        repeatPenalty: 1.1,
         stopSequences: const [_imEnd, '<|endoftext|>'],
       );
 
@@ -200,12 +201,9 @@ class LocalScamAnalysisService {
         .loadModel(
           LlamaConfig(
             modelPath: modelPath,
-            nThreads: 4,
-            nGpuLayers: 0,
             contextSize: 4096,
             batchSize: 4096,
             useGpu: false,
-            verbose: false,
           ),
         )
         .timeout(_loadTimeout);

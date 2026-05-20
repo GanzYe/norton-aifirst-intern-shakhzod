@@ -14,7 +14,7 @@ class InputClassifier {
   );
 
   static final _emlHeaderPattern = RegExp(
-    r'^(?:From|Return-Path|Received|MIME-Version|Content-Type):',
+    '^(?:From|Return-Path|Received|MIME-Version|Content-Type):',
     multiLine: true,
     caseSensitive: false,
   );

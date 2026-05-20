@@ -5,7 +5,7 @@ import 'package:scam_message_detector/core/theme/app_text_styles.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/risk_level.dart';
 
 class RiskBadge extends StatelessWidget {
-  const RiskBadge({super.key, required this.riskLevel});
+  const RiskBadge({required this.riskLevel, super.key});
 
   final RiskLevel riskLevel;
 

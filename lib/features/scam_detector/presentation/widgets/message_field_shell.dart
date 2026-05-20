@@ -9,10 +9,10 @@ import 'package:scam_message_detector/core/theme/app_sizes.dart';
 /// stroke and rounded corners composite cleanly without a white fringe.
 class MessageFieldShell extends StatelessWidget {
   const MessageFieldShell({
-    super.key,
     required this.incognito,
     required this.focused,
     required this.child,
+    super.key,
   });
 
   final bool incognito;

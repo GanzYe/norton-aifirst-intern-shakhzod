@@ -9,9 +9,7 @@ import 'package:scam_message_detector/features/scam_detector/presentation/consta
 /// Contextual notes above the message field (incognito / offline only).
 class AnalysisNotesSection extends StatelessWidget {
   const AnalysisNotesSection({
-    super.key,
-    required this.incognito,
-    required this.isOnline,
+    required this.incognito, required this.isOnline, super.key,
   });
 
   final bool incognito;
@@ -84,7 +82,7 @@ class _NoteCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: surface,
         borderRadius: AppRadius.smAll,
-        border: Border.all(color: border, width: AppSizes.borderThin),
+        border: Border.all(color: border),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(

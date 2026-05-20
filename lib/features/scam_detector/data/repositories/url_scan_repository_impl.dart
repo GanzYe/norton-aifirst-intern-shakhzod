@@ -137,7 +137,7 @@ class UrlScanRepositoryImpl implements UrlScanRepository {
     if (message != null && description != null && description.isNotEmpty) {
       return '$message: $description';
     }
-    return message?.isNotEmpty == true ? message : description;
+    return message?.isNotEmpty ?? false ? message : description;
   }
 
   /// `unlisted` / `private` get rejected on free-tier API keys with messages

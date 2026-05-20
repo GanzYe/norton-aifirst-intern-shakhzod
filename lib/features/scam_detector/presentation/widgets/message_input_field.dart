@@ -11,7 +11,6 @@ import 'package:scam_message_detector/core/theme/app_text_styles.dart';
 /// Analyze expands from right → left when the user starts typing.
 class MessageInputField extends StatefulWidget {
   const MessageInputField({
-    super.key,
     required this.controller,
     required this.enabled,
     required this.incognito,
@@ -19,6 +18,7 @@ class MessageInputField extends StatefulWidget {
     required this.onPickEml,
     required this.onClearEml,
     required this.attachedEmlName,
+    super.key,
     this.onFocusChanged,
     this.hintText =
         'Enter a URL, message, email, or snippet to check for scams.',
@@ -251,7 +251,6 @@ class _EmlAttachedChip extends StatelessWidget {
         borderRadius: AppRadius.pillAll,
         border: Border.all(
           color: AppColors.resolveBorder(incognito: incognito),
-          width: AppSizes.borderThin,
         ),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -366,7 +365,6 @@ class _InlineAnalyzeButtonState extends State<_InlineAnalyzeButton>
               minimumSize: const Size(0, AppSizes.inputInlineButtonHeight),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               side: const BorderSide(
-                color: AppColors.borderBlack,
                 width: AppSizes.borderMedium,
               ),
               shape: RoundedRectangleBorder(borderRadius: AppRadius.smAll),

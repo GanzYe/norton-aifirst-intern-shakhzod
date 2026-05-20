@@ -69,7 +69,7 @@ bool _looksLikeUserMessage(String message) {
     'http',
     'status',
     'null check',
-    'type \'',
+    "type '",
     'package:',
   ];
   return noise.every((token) => !lower.contains(token));

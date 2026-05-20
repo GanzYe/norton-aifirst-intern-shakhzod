@@ -8,9 +8,7 @@ import 'package:scam_message_detector/core/theme/app_text_styles.dart';
 
 class ExampleMessageTile extends StatelessWidget {
   const ExampleMessageTile({
-    super.key,
-    required this.title,
-    required this.onTap,
+    required this.title, required this.onTap, super.key,
   });
 
   final String title;

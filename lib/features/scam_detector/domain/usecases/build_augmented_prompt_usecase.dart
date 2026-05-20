@@ -1,7 +1,8 @@
 import 'package:scam_message_detector/features/scam_detector/domain/entities/email_auth_alignment.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/threat_intel_snapshot.dart';
 
-/// Synthesizes scrubbed user input and OSINT context into a single Gemini prompt.
+/// Synthesizes scrubbed user input and OSINT context into a single Gemini
+/// prompt.
 class BuildAugmentedPromptUseCase {
   const BuildAugmentedPromptUseCase();
 
@@ -17,18 +18,19 @@ class BuildAugmentedPromptUseCase {
       ..writeln();
 
     if (intel.osintSkippedDueToIncognito) {
-      buffer.writeln('## Threat intelligence');
-      buffer.writeln(
-        'OSINT lookups were skipped (Incognito mode + plain text input).',
-      );
+      buffer
+        ..writeln('## Threat intelligence')
+        ..writeln(
+          'OSINT lookups were skipped (Incognito mode + plain text input).',
+        );
     } else {
       buffer.writeln('## Threat intelligence');
 
       final vt = intel.virusTotal;
       if (vt != null) {
         buffer.writeln(
-          '- VirusTotal (${vt.url}): ${vt.maliciousCount} malicious detections '
-          'out of ${vt.totalEngines} engines.',
+          '- VirusTotal (${vt.url}): ${vt.maliciousCount} malicious '
+          'detections out of ${vt.totalEngines} engines.',
         );
       }
 
@@ -36,14 +38,15 @@ class BuildAugmentedPromptUseCase {
       if (abuse != null) {
         buffer.writeln(
           '- AbuseIPDB (${abuse.ipAddress}): abuse confidence '
-          '${abuse.abuseConfidenceScore}%, total reports ${abuse.totalReports}.',
+          '${abuse.abuseConfidenceScore}%, reports ${abuse.totalReports}.',
         );
       }
 
       final urlScan = intel.urlScan;
       if (urlScan != null) {
         buffer.writeln(
-          '- URLScan.io: scan submitted (${urlScan.visibility}), id ${urlScan.scanId}.',
+          '- URLScan.io: scan submitted (${urlScan.visibility}), '
+          'id ${urlScan.scanId}.',
         );
       }
     }
@@ -58,10 +61,12 @@ class BuildAugmentedPromptUseCase {
         ..writeln('- DMARC: ${_label(auth.dmarc)}');
     }
 
-    buffer.writeln();
-    buffer.writeln(
-      'Use all context above. Return structured JSON per the configured schema.',
-    );
+    buffer
+      ..writeln()
+      ..writeln(
+        'Use all context above. Return structured JSON per the configured '
+        'schema.',
+      );
 
     return buffer.toString();
   }

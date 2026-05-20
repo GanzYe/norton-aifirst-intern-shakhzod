@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:scam_message_detector/core/background/background_work_coordinator.dart' show BackgroundWorkCoordinator;
 import 'package:scam_message_detector/features/scam_detector/data/services/model_download_service.dart';
 
 part 'incognito_mode_provider.g.dart';
@@ -16,9 +17,9 @@ class IncognitoModeController extends _$IncognitoModeController {
   @override
   bool build() => false;
 
-  void toggleOff() => state = false;
+  void disable() => state = false;
 
-  void setEnabled(bool enabled) => state = enabled;
+  void enable() => state = true;
 
   /// Starts a background download; progress and completion are handled by
   /// [BackgroundWorkCoordinator].

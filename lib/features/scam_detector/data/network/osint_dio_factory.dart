@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
-/// Builds isolated Dio clients per OSINT vendor with timeouts and API-key interceptors.
+/// Builds isolated Dio clients per OSINT vendor with timeouts and API-key
+/// interceptors.
 abstract final class OsintDioFactory {
   static const _connectTimeout = Duration(seconds: 20);
   static const _receiveTimeout = Duration(seconds: 45);
