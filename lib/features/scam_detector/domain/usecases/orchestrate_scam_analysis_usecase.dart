@@ -150,6 +150,12 @@ class OrchestrateScamAnalysisUseCase {
       context: {'promptChars': masterPrompt.length},
     );
 
+    PipelineLog.modelRoute(
+      target: 'regional',
+      model: 'GROQ→GEMINI cloud cascade',
+      payload: masterPrompt,
+    );
+
     try {
       final analysis =
           await _scamAnalysisRepository.analyzeAugmentedPrompt(masterPrompt);
@@ -173,6 +179,11 @@ class OrchestrateScamAnalysisUseCase {
         _stage,
         'cloud exhausted; trying on-device fallback',
         error: cloudError,
+      );
+      PipelineLog.modelRoute(
+        target: 'local',
+        model: 'on-device Qwen2.5-1.5B (LLAMA_LOCAL)',
+        payload: scrubbed,
       );
       final localResult = await _tryLocalFallback(scrubbed);
       if (localResult != null) {
@@ -224,6 +235,12 @@ class OrchestrateScamAnalysisUseCase {
         localModelUnavailable: true,
       );
     }
+
+    PipelineLog.modelRoute(
+      target: 'local',
+      model: 'on-device Qwen2 (LLAMA_LOCAL)',
+      payload: scrubbed,
+    );
 
     try {
       final result = await _localScamAnalysisService.analyze(scrubbed);
