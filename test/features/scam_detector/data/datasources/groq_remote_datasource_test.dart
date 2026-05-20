@@ -19,9 +19,9 @@ void main() {
   // — `Matchers.any` accepts any JSON payload, which is what we want since
   // GroqRemoteDataSource embeds a private system-prompt string we can't reach
   // from a unit test.
-  final anyBody = Matchers.any;
+  const anyBody = Matchers.any;
 
-  Map<String, dynamic> _chatPayload(Map<String, dynamic> verdict) {
+  Map<String, dynamic> chatPayload(Map<String, dynamic> verdict) {
     return {
       'id': 'chatcmpl-test',
       'object': 'chat.completion',
@@ -48,11 +48,11 @@ void main() {
         endpoint,
         (server) => server.reply(
           200,
-          _chatPayload({
+          chatPayload({
             'risk_level': 'DANGEROUS',
             'confidence': 91,
-            'explanation':
-                'Bank suspension wording plus a suspicious .example login link is classic phishing.',
+            'explanation': 'Bank suspension wording plus a suspicious '
+                '.example login link is classic phishing.',
           }),
         ),
         data: anyBody,
@@ -87,7 +87,7 @@ void main() {
           endpoint,
           (server) => server.reply(
             200,
-            _chatPayload({
+            chatPayload({
               'risk_level': 'SUSPICIOUS',
               'confidence': 70,
               'explanation': 'Mixed OSINT signals warrant caution.',
@@ -100,8 +100,9 @@ void main() {
 
         expect(dto.riskLevel, 'SUSPICIOUS');
         expect(capturedBody, isNotNull);
-        final messages = capturedBody!['messages'] as List;
-        expect(messages.last['content'], masterPrompt);
+        final messages = capturedBody!['messages'] as List<dynamic>;
+        final lastMessage = messages.last as Map<String, dynamic>;
+        expect(lastMessage['content'], masterPrompt);
         expect(capturedBody!['model'], 'llama-3.3-70b-versatile');
         expect(capturedBody!['response_format'], {'type': 'json_object'});
       },

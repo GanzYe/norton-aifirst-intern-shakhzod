@@ -34,8 +34,8 @@ void main() {
 
   group('LocalScamAnalysisService.parseModelResponseForTest', () {
     test('parses a clean JSON object', () {
-      const raw =
-          '{"risk_level":"DANGEROUS","confidence":92,"explanation":"Phishing link plus urgency."}';
+      const raw = '{"risk_level":"DANGEROUS","confidence":92,'
+          '"explanation":"Phishing link plus urgency."}';
       final result = service.parseModelResponseForTest(raw);
       expect(result.riskLevel, RiskLevel.dangerous);
       expect(result.confidence, 92);
@@ -43,8 +43,12 @@ void main() {
     });
 
     test('strips ChatML artifacts before parsing', () {
-      const raw =
-          'assistant\n{"risk_level":"SAFE","confidence":80,"explanation":"Routine notification."}<|im_end|>';
+      final raw = [
+        'assistant\n',
+        '{"risk_level":"SAFE","confidence":80,',
+        '"explanation":"Routine notification."}',
+        '<|im_end|>',
+      ].join();
       final result = service.parseModelResponseForTest(raw);
       expect(result.riskLevel, RiskLevel.safe);
       expect(result.confidence, 80);
@@ -62,10 +66,10 @@ void main() {
     });
 
     test(
-      'falls back to natural-language `LABEL: explanation` (regression for the bug fix)',
+      'falls back to natural-language LABEL: explanation (regression)',
       () {
-        const raw =
-            'SUSPICIOUS: The message appears to be a phishing attempt. The sender mimics a bank.';
+        const raw = 'SUSPICIOUS: The message appears to be a phishing '
+            'attempt. The sender mimics a bank.';
         final result = service.parseModelResponseForTest(raw);
         expect(result.riskLevel, RiskLevel.suspicious);
         expect(result.explanation, contains('phishing'));
@@ -136,8 +140,8 @@ void main() {
       wireHealthyEnv();
       when(llama.generate(any)).thenAnswer(
         (_) async => const LlamaResponse(
-          text:
-              '{"risk_level":"DANGEROUS","confidence":91,"explanation":"Suspicious .tk login link."}',
+          text: '{"risk_level":"DANGEROUS","confidence":91,'
+              '"explanation":"Suspicious .tk login link."}',
           tokensGenerated: 32,
           generationTimeMs: 1200,
         ),

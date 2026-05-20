@@ -56,7 +56,7 @@ void main() {
     test('preserves IRS scam wording and redacts agent name', () {
       const irsScam =
           'Final Notice from IRS: A warrant has been issued for your arrest '
-          'due to unpaid taxes. Pay \$4,250 today via gift cards to avoid '
+          r'due to unpaid taxes. Pay $4,250 today via gift cards to avoid '
           'legal action. Contact agent Smith immediately.';
 
       final out = service.regexScrubForTest(irsScam);
@@ -69,7 +69,7 @@ void main() {
   group('LocalPiiRedactionService.isAcceptableLlmScrubForTest', () {
     const irsScam =
         'Final Notice from IRS: A warrant has been issued for your arrest '
-        'due to unpaid taxes. Pay \$4,250 today via gift cards to avoid '
+        r'due to unpaid taxes. Pay $4,250 today via gift cards to avoid '
         'legal action. Contact agent Smith immediately.';
 
     test('rejects output that starts with [REDACTED]', () {
@@ -77,7 +77,7 @@ void main() {
         service.isAcceptableLlmScrubForTest(
           irsScam,
           '[REDACTED] has been issued a warrant for your arrest due to '
-          'unpaid taxes. Pay \$4,250 today via gift cards to avoid legal '
+          r'unpaid taxes. Pay $4,250 today via gift cards to avoid legal '
           'action. Contact agent Smith immediately.',
         ),
         isFalse,
@@ -86,7 +86,7 @@ void main() {
 
     test('rejects LLM output that still exposes secrets', () {
       const input =
-          "Hello Shakhzod, Your API key is AIWHHQOSOWBWHJ18HWJAJ78BWO8JWOM.";
+          'Hello Shakhzod, Your API key is AIWHHQOSOWBWHJ18HWJAJ78BWO8JWOM.';
       expect(service.isAcceptableLlmScrubForTest(input, input), isFalse);
     });
 
@@ -95,7 +95,7 @@ void main() {
         service.isAcceptableLlmScrubForTest(
           irsScam,
           'Final Notice from IRS: A warrant has been issued for your arrest '
-          'due to unpaid taxes. Pay \$4,250 today via gift cards to avoid '
+          r'due to unpaid taxes. Pay $4,250 today via gift cards to avoid '
           'legal action. Contact [REDACTED] immediately.',
         ),
         isTrue,
@@ -122,7 +122,7 @@ void main() {
           'Your API key is AIWHHQOSOWBWHJ18HWJAJ78BWO8JWOM.';
       when(
         llama.generate(any),
-      ).thenAnswer((_) async => LlamaResponse(text: input));
+      ).thenAnswer((_) async => const LlamaResponse(text: input));
 
       final out = await service.scrubPii(input);
 
@@ -140,14 +140,14 @@ void main() {
           (_) async => const LlamaResponse(
             text:
                 '[REDACTED] has been issued a warrant for your arrest due '
-                'to unpaid taxes. Pay \$4,250 today via gift cards to avoid '
+                r'to unpaid taxes. Pay $4,250 today via gift cards to avoid '
                 'legal action. Contact agent Smith immediately.',
           ),
         );
 
         const irsScam =
             'Final Notice from IRS: A warrant has been issued for your arrest '
-            'due to unpaid taxes. Pay \$4,250 today via gift cards to avoid '
+            r'due to unpaid taxes. Pay $4,250 today via gift cards to avoid '
             'legal action. Contact agent Smith immediately.';
 
         final out = await service.scrubPii(irsScam);

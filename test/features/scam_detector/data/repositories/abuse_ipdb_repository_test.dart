@@ -65,7 +65,9 @@ void main() {
     test('throws when payload has no "data" field', () async {
       adapter.onGet(
         '/check',
-        (server) => server.reply(200, {'errors': []}),
+        (server) => server.reply(200, {
+          'errors': <Map<String, dynamic>>[],
+        }),
         queryParameters: {'ipAddress': testIp, 'maxAgeInDays': 90},
       );
 
@@ -85,7 +87,9 @@ void main() {
             response: Response(
               requestOptions: RequestOptions(path: '/check'),
               statusCode: 429,
-              data: {'errors': []},
+              data: {
+                'errors': <Map<String, dynamic>>[],
+              },
             ),
             type: DioExceptionType.badResponse,
           ),

@@ -9,7 +9,8 @@ void main() {
       const ProviderScope(child: MaterialApp(home: HomeScreen())),
     );
 
-    expect(find.text('Try an example'), findsOneWidget);
+    expect(find.text('Sample messages'), findsOneWidget);
+    expect(find.text('Tap to try one'), findsOneWidget);
     expect(find.textContaining('Paste a suspicious SMS'), findsOneWidget);
     expect(find.text('.eml'), findsOneWidget);
 

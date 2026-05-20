@@ -34,7 +34,7 @@ void main() {
 
     test('masks API key label but keeps narrative', () {
       const input =
-          "Hello Shakhzod. Your API key is AIWHHQOSOWBWHJ18HWJAJ78BWO8JWOM.";
+          'Hello Shakhzod. Your API key is AIWHHQOSOWBWHJ18HWJAJ78BWO8JWOM.';
       final out = PiiRegexScrubber.scrub(input);
       expect(out, contains('Hello [REDACTED_NAME]'));
       expect(out, contains('Your API key is [REDACTED_SECRET]'));
@@ -49,11 +49,11 @@ void main() {
 
     test('preserves IRS scam body', () {
       const input =
-          'Final Notice from IRS: Pay \$4,250 via gift cards. '
+          r'Final Notice from IRS: Pay $4,250 via gift cards. '
           'Contact agent Smith at john@scam.test.';
       final out = PiiRegexScrubber.scrub(input);
       expect(out, contains('Final Notice from IRS'));
-      expect(out, contains('\$4,250'));
+      expect(out, contains(r'$4,250'));
       expect(out, contains('Contact agent [REDACTED_NAME]'));
       expect(out, contains('[REDACTED_EMAIL]'));
     });
