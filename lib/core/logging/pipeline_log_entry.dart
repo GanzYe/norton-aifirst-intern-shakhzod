@@ -18,7 +18,7 @@ class PipelineLogEntry {
   final String? error;
   final DateTime timestamp;
 
-  /// Single-line summary matching [PipelineLog] console format.
+  /// Single-line summary matching the PipelineLog console format.
   String get summaryLine {
     final buf = StringBuffer()
       ..write('[')

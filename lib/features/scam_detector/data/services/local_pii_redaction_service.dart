@@ -182,7 +182,6 @@ class LocalPiiRedactionService implements PiiRedactionRepository {
     final loaded = await _llama.loadModel(
       LlamaConfig(
         modelPath: modelPath,
-        contextSize: 2048,
         batchSize: 2048,
         nThreads: 6,
         useGpu: false,
