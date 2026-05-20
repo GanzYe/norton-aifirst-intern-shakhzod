@@ -17,7 +17,7 @@ The app goes beyond a simple “send text to ChatGPT” flow. It runs a small **
 3. Gather threat intelligence from external APIs (VirusTotal, AbuseIPDB, URLScan.io)
 4. Build an augmented prompt with OSINT context
 5. Send it to cloud AI (Groq → Gemini cascade)
-6. Fall back to an on-device model when offline or when cloud APIs fail
+6. Fall back to an on-device model when offline or when cloud APIs fail (**Android only** for local inference)
 
 I built this as a prototype, not a production Norton product. The focus was on clean architecture, realistic threat-analysis flow, and learning how to work with AI tools during development.
 
@@ -32,11 +32,33 @@ I built this as a prototype, not a production Norton product. The focus was on c
 | **Sample messages** | Three built-in examples (fake bank alert, prize scam, IRS impersonation) |
 | **Cloud AI cascade** | Groq (`llama-3.3-70b-versatile`) first, then Gemini (`gemini-2.5-flash-lite`) |
 | **OSINT enrichment** | VirusTotal, AbuseIPDB, and URLScan.io run in parallel when URLs/IPs are found |
-| **Incognito mode** *(extra)* | On-device Qwen2.5-1.5B model (~1 GB), PII redaction, optional OSINT skip |
-| **Offline support** | Uses the local model when there is no internet (if downloaded) |
-| **Background model download** | Large model downloads in the background with progress UI and notifications |
+| **Incognito mode** *(extra)* | On-device Qwen2.5-1.5B model (~1 GB), PII redaction, optional OSINT skip — **Android only** (see [Platform support](#platform-support)) |
+| **Offline support** | Uses the local model when there is no internet (if downloaded) — **Android only** |
+| **Background model download** | Large model downloads in the background with progress UI and notifications — **Android only** |
 | **Result UI** | Risk badge, confidence bar, and explanation card with fade/slide animation |
 | **Norton-inspired theme** | Light UI with Norton yellow accents; subtle warm tint in Incognito mode |
+
+---
+
+## Platform support
+
+| Capability | Android | iOS |
+|------------|---------|-----|
+| Cloud analysis (Groq → Gemini) | Yes | Yes (expected) |
+| OSINT (VirusTotal, AbuseIPDB, URLScan) | Yes | Yes (expected) |
+| EML attachment parsing | Yes | Yes (expected) |
+| Incognito / local Qwen via `flutter_llama` | **Yes** (tested) | **No** — not validated |
+| Offline local fallback | **Yes** (tested) | **No** — not validated |
+
+### Please run and review on Android
+
+**Local llama (Incognito mode, offline analysis, and the ~1 GB model download) is implemented and tested only on Android.**
+
+I did not have access to a Mac or physical iPhone during development, so I could not run `pod install`, build the native `flutter_llama` stack on iOS, or verify Incognito end-to-end on a real device. The Dart layer deliberately treats non-Android platforms as “local model unavailable” (`LlamaNativeProbe` returns `false` off Android), so the app should still launch on iOS and use **cloud analysis**, but **do not expect Incognito or offline local inference on iOS**.
+
+**For grading, demos, and bug reports, please use an Android device or emulator.** That is the only platform where the full feature set was verified.
+
+iOS project files are included (`ios/`, minimum deployment target **14.0** for `background_downloader`), but iOS is **best-effort** until someone can validate a Mac build.
 
 ---
 
@@ -45,7 +67,8 @@ I built this as a prototype, not a production Norton product. The focus was on c
 ### Prerequisites
 
 - [Flutter SDK](https://docs.flutter.dev/get-started/install) **^3.11.0**
-- Android Studio / Xcode for device emulators (or a physical device)
+- **Android:** Android Studio and an emulator or physical device (**recommended for full testing**)
+- **iOS (optional):** macOS with Xcode 15+ and CocoaPods — only needed if you want to try the iOS build; cloud features should work, local llama will not
 - API keys (see below)
 
 ### 1. Clone and configure environment
@@ -77,9 +100,11 @@ dart run build_runner build --delete-conflicting-outputs
 
 This generates Riverpod providers, Freezed models, and `envied` env bindings.
 
-### 3. Android: set up on-device AI (flutter_llama)
+### 3. Android only: set up on-device AI (flutter_llama)
 
-The `flutter_llama` package on pub.dev does not ship `llama.cpp` sources. You need a one-time setup script after every `flutter pub get` or cache clear:
+> **Skip this section on iOS.** Local inference is not supported off Android in this prototype.
+
+The `flutter_llama` package on pub.dev does not ship `llama.cpp` sources. On **Android**, run a one-time setup script after every `flutter pub get` or cache clear:
 
 **Windows (PowerShell):**
 
@@ -100,8 +125,11 @@ The script clones `llama.cpp` into the pub cache and applies CPU-only Android pa
 
 ### 4. Run the app
 
+**Android (recommended — full features):**
+
 ```bash
 flutter run
+# or pick a device: flutter devices && flutter run -d <device_id>
 ```
 
 **Release APK (Android):**
@@ -111,14 +139,27 @@ flutter build apk --release
 # Output: build/app/outputs/flutter-apk/app-release.apk
 ```
 
+**iOS (macOS only — cloud path; local llama not tested):**
+
+```bash
+flutter pub get
+cd ios && pod install && cd ..
+flutter run -d <iphone_or_simulator>
+```
+
+The iOS deployment target is **14.0** (`ios/Podfile`, `IPHONEOS_DEPLOYMENT_TARGET` in Xcode) because `background_downloader` requires iOS 14+.
+
 ### Troubleshooting
 
 | Problem | Fix |
 |---------|-----|
 | Kotlin cache errors (project on `E:` drive, pub cache on `C:`) | `android/gradle.properties` already sets `kotlin.incremental=false` |
-| CMake / llama build errors | Run `flutter clean`, re-run the setup script, then build again |
+| CMake / llama build errors (Android) | Run `flutter clean`, re-run the setup script, then build again |
 | Cloud analysis fails | Check `.env` keys; Groq free tier rate-limits quickly — Gemini is the fallback |
 | Incognito analysis crashes on Android | Make sure setup script ran; local inference uses CPU-only config (`nGpuLayers: 0`) |
+| Incognito / offline does nothing on iOS | Expected — local llama is Android-only in this build; use cloud mode or test on Android |
+| CocoaPods / deployment target on iOS | Ensure `ios/Podfile` has `platform :ios, '14.0'` and run `pod install` after `flutter pub get` |
+| `Generated.xcconfig` missing (iOS) | Run `flutter pub get` from the project root before `pod install` |
 
 ---
 
@@ -181,7 +222,7 @@ flowchart TD
 - **State:** `flutter_riverpod` + `riverpod_annotation`
 - **Routing:** `go_router`
 - **Networking:** `dio`, `google_generative_ai`
-- **Local AI:** `flutter_llama` + Qwen2.5-1.5B-Instruct (Q4_K_M, ~1 GB)
+- **Local AI (Android only):** `flutter_llama` + Qwen2.5-1.5B-Instruct (Q4_K_M, ~1 GB)
 - **Background work:** `background_downloader`, `flutter_foreground_task`, `flutter_local_notifications`
 - **Email parsing:** `enough_mail`
 - **Code gen:** `freezed`, `json_serializable`, `envied`, `build_runner`
@@ -221,12 +262,33 @@ docs/screenshots/05-offline-local-result.png
 docs/demo/smd-demo.mp4
 ```
 
-**Suggested demo script:**
-1. Open app, tap a sample message (e.g. “Fake bank alert”)
+**Suggested demo script (use Android for steps 4–5):**
+1. Open app on **Android**, tap a sample message (e.g. “Fake bank alert”)
 2. Analyze and show `DANGEROUS` result with explanation
 3. Attach an `.eml` file and show email-auth context in logs
-4. Enable Incognito, show model download dialog
-5. Turn off Wi‑Fi, analyze again with on-device model
+4. Enable Incognito, show model download dialog *(Android)*
+5. Turn off Wi‑Fi, analyze again with on-device model *(Android)*
+
+---
+
+## Cursor AI rules (`.cursorrules`)
+
+The repo includes a [`.cursorrules`](.cursorrules) file at the project root. **Cursor loads it automatically** for every chat and agent session in this workspace, so the model follows the same engineering standards without repeating them in each prompt.
+
+The file defines how AI should help with this Flutter codebase:
+
+| Section | What it enforces |
+|--------|------------------|
+| **Architecture** | Feature-first clean architecture (`data` / `domain` / `presentation`), dependency inversion, `go_router` |
+| **State** | Riverpod with code generation, `AsyncValue` for async work, `freezed` + `json_serializable` |
+| **Performance** | Slivers for complex lists, isolates for heavy work, image cache limits, `RepaintBoundary`, `const` widgets |
+| **Security** | No secrets in `SharedPreferences`; `envied` for `.env`; certificate pinning on Dio |
+| **Testing** | High domain/data coverage, golden tests over fragile text assertions, Riverpod overrides in tests |
+| **Pitfalls** | `context.mounted` after `await`, dispose controllers, no force-unwrap `!` |
+| **Tooling** | Respect FVM (`.fvmrc`), strict analysis, `log()` instead of `print()`, `unawaited_futures` |
+| **UI** | Design tokens only in `core/theme/` — no hardcoded colors/sizes in widgets |
+
+When I start a new Cursor task, I rely on `.cursorrules` for consistency; for one-off fixes (docs, tooling, README) I still add a short explicit prompt (see the log below).
 
 ---
 
@@ -236,7 +298,20 @@ Below are real examples of how I used Cursor during this project. I did not copy
 
 ---
 
-### 1. Initial architecture scaffold
+### 1. README: AI log + `.cursorrules` documentation (this chat)
+
+**Prompt:**
+> Добавь в README в секцию AI Interaction Log мой промпт в этом чате как первый пример! И напиши в README про .cursorrules
+
+**AI response (summary):**
+Added a **Cursor AI rules (`.cursorrules`)** section describing what the file contains and how Cursor uses it. Inserted this interaction as **example #1** in the AI Interaction Log (existing examples renumbered). Earlier in the same session, the agent had diagnosed `git-agent` missing on Windows, installed v0.3.0 from [GitAgentHQ/git-agent-cli releases](https://github.com/GitAgentHQ/git-agent-cli/releases), and added it to the user PATH (Scoop/winget do not ship this package).
+
+**My commentary:**
+I use the log both for Flutter implementation and for assignment hygiene (docs, tooling). Keeping the prompt in Russian here matches what I actually typed. The `.cursorrules` section makes it clear to reviewers that architecture/security constraints are project-wide, not accidental one-off AI suggestions. I still verify README edits myself — the agent can mis-describe file paths or overstate what was tested.
+
+---
+
+### 2. Initial architecture scaffold
 
 **Prompt:**
 > Set up a Flutter scam detector with clean architecture: data/domain/presentation under `lib/features/scam_detector`, Riverpod for state, go_router for navigation, and a Gemini datasource that returns structured JSON with risk_level, confidence, explanation.
@@ -249,7 +324,7 @@ Good starting point. I kept the structure but renamed things to match my SOAR id
 
 ---
 
-### 2. SOAR pipeline design (iterative)
+### 3. SOAR pipeline design (iterative)
 
 **Prompt:**
 > I want a use case that: scrubs PII when incognito is on, runs VirusTotal + AbuseIPDB + URLScan in parallel, parses EML auth headers, builds one master prompt, then calls Gemini. OSINT errors should not block analysis.
@@ -265,7 +340,7 @@ The second prompt was necessary — the first version had a 200-line god method.
 
 ---
 
-### 3. Debugging flutter_llama SIGABRT (ggml_abort)
+### 4. Debugging flutter_llama SIGABRT (ggml_abort)
 
 **Prompt:**
 > Android app crashes with SIGABRT during second local analysis call. Log shows ggml_abort in llama_context::decode. Using flutter_llama 1.1.2 with Qwen2.5-1.5B. First analyze works, second crashes.
@@ -281,7 +356,7 @@ This took many iterations and was the hardest part of the project. The AI’s fi
 
 ---
 
-### 4. Local model returns prose instead of JSON
+### 5. Local model returns prose instead of JSON
 
 **Prompt:**
 > Qwen2.5-1.5B on device ignores “respond with JSON only” and returns `SUSPICIOUS: This message looks like phishing because...`. Cloud models follow schema fine. How should I parse this without failing the whole offline path?
@@ -294,7 +369,7 @@ I implemented both: improved prompt **and** `_tryParseLabelled` fallback. I reje
 
 ---
 
-### 5. Incognito UI and background download
+### 6. Incognito UI and background download
 
 **Prompt:**
 > Build an Incognito mode switch widget: shield icon, subtitle explaining on-device vs cloud, confirmation dialog before ~1 GB download, linear progress while downloading, disable switch during download. Match existing AppColors and use Norton yellow accent when enabled.
@@ -310,7 +385,7 @@ UI code was mostly fine. I changed the dialog text to be clearer about backgroun
 
 ---
 
-### 6. Unit tests for cloud cascade
+### 7. Unit tests for cloud cascade
 
 **Prompt:**
 > Write tests for ScamAnalysisRepositoryImpl: Groq success skips Gemini; Groq 429 falls through to Gemini; missing Groq key goes straight to Gemini; both fail throws GeminiDataSourceException. Use mockito.
@@ -376,11 +451,14 @@ flutter test
 
 ### Manual testing checklist
 
+**Run on Android** for items marked *(Android)*.
+
 - [ ] Paste sample “Fake bank alert” → expect `DANGEROUS`
 - [ ] Analyze a clean message → expect `SAFE` or low risk
 - [ ] Attach `.eml` with failing SPF/DKIM → check augmented prompt includes auth section
-- [ ] Enable Incognito → download model → analyze with airplane mode
+- [ ] *(Android)* Enable Incognito → download model → analyze with airplane mode
 - [ ] Revoke Groq key → confirm Gemini fallback still works
+- [ ] *(Optional, iOS)* Cloud-only analyze with sample message — Incognito should stay unavailable / cloud-only
 
 ---
 
@@ -406,7 +484,7 @@ Despite the pain, I learned a lot about AI-assisted development and improved my 
 ### What would I do differently?
 
 1. **MVP first:** Ship cloud-only analysis end-to-end, then add Incognito as a stretch goal.
-2. **Earlier device testing:** I would test on a real Android phone sooner — emulators hide native llama issues.
+2. **Earlier device testing:** I would test on a real Android phone sooner — emulators hide native llama issues. I also lacked iOS hardware/Mac access, so Incognito was scoped to Android only.
 3. **Fewer OSINT providers initially:** Three APIs plus cascade logic was a lot for a prototype; one (VirusTotal) would be enough at first.
 4. **Fix the widget test** before submission — small polish item I ran out of time for.
 
@@ -418,7 +496,7 @@ Despite the pain, I learned a lot about AI-assisted development and improved my 
 - [ ] Share/export analysis report (PDF or copy summary)
 - [ ] Scan QR codes and clipboard links directly
 - [ ] History of past analyses (local only, encrypted)
-- [ ] iOS validation for `flutter_llama` builds (currently focused on Android)
+- [ ] iOS validation for `flutter_llama` / Incognito (Android-only today; needs Mac + device testing)
 - [ ] Improve widget/integration test coverage for full UI flow
 - [ ] Rate-limit UI feedback when Groq/Gemini quotas are hit
 - [ ] Optional dark mode (Incognito currently uses a warm accent, not full dark theme)
