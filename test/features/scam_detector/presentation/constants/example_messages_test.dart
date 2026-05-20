@@ -1,15 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/mockito.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/risk_level.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/scam_analysis.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/soar_analysis_input.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/threat_intel_snapshot.dart';
-import 'package:scam_message_detector/features/scam_detector/domain/repositories/url_scan_repository.dart';
-import 'package:scam_message_detector/features/scam_detector/domain/repositories/virus_total_repository.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/usecases/build_augmented_prompt_usecase.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/usecases/orchestrate_scam_analysis_usecase.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/constants/example_message_risk_profile.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/constants/example_messages.dart';
-import 'package:mockito/mockito.dart';
 
 import '../../../../support/mocks.mocks.dart';
 
@@ -53,7 +51,7 @@ void main() {
         expect(lower, isNot(contains('bit.ly/')));
         expect(lower, isNot(contains('.xyz/')));
         expect(lower, isNot(contains('verify immediately at http')));
-        expect(lower, isNot(contains('won \$1,000,000')));
+        expect(lower, isNot(contains(r'won $1,000,000')));
         expect(lower, isNot(contains('account will be suspended')));
       }
     });
@@ -131,7 +129,8 @@ void main() {
 
     for (final sample in ExampleMessages.samples) {
       test(
-        'online pipeline forwards "${sample.title}" and returns ${sample.expectedRisk.label}',
+        'online pipeline forwards "${sample.title}" '
+        'and returns ${sample.expectedRisk.label}',
         () async {
           when(scamRepo.analyzeAugmentedPrompt(any)).thenAnswer((inv) async {
             final prompt = inv.positionalArguments.first as String;
@@ -147,7 +146,6 @@ void main() {
             SoarAnalysisInput(
               rawContent: sample.body,
               kind: SoarInputKind.plainText,
-              incognitoEnabled: false,
             ),
           );
 
@@ -164,7 +162,7 @@ void main() {
         final prompt = inv.positionalArguments.first as String;
         expect(prompt, contains(sample.body));
         expect(prompt, contains('OSINT lookups were skipped'));
-        return ScamAnalysis(
+        return const ScamAnalysis(
           riskLevel: RiskLevel.suspicious,
           confidence: 70,
           explanation: 'Incognito path',

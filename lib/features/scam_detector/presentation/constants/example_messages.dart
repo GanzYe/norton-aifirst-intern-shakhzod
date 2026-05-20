@@ -37,16 +37,17 @@ abstract final class ExampleMessages {
     ExampleMessage(
       title: 'Suspicious · Unusual sign-in',
       body:
-          'Microsoft account: Sign-in from a new app on Android in Mexico City. '
-          'If this was not you, reset your password the next time you sign in.',
+          'Microsoft account: Sign-in from a new app on Android in '
+          'Mexico City. If this was not you, reset your password the next '
+          'time you sign in.',
       expectedRisk: RiskLevel.suspicious,
     ),
     ExampleMessage(
       title: 'Suspicious · Billing past due',
       body:
-          'T-Mobile: Line ending 0142 may lose service tonight unless a past-due '
-          'balance of \$38.15 is resolved. Pay only through the My T-Mobile app '
-          'you already installed — not through links in texts.',
+          'T-Mobile: Line ending 0142 may lose service tonight unless a '
+          r'past-due balance of $38.15 is resolved. Pay only through the '
+          'My T-Mobile app you already installed — not through links in texts.',
       expectedRisk: RiskLevel.suspicious,
     ),
     ExampleMessage(

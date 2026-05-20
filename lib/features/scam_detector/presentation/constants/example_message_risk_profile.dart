@@ -39,7 +39,7 @@ abstract final class ExampleMessageRiskProfile {
         lower.contains('lose service tonight')) {
       score += 2;
     }
-    if (RegExp(r'microsoft|t-mobile|dhl|amazon', caseSensitive: false)
+    if (RegExp('microsoft|t-mobile|dhl|amazon', caseSensitive: false)
         .hasMatch(body)) {
       score += 1;
     }

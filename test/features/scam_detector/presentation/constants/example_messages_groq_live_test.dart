@@ -42,7 +42,8 @@ void main() {
             actual,
             sample.expectedRisk,
             reason:
-                'Groq returned ${dto.riskLevel} (confidence ${dto.confidence}). '
+                'Groq returned ${dto.riskLevel} '
+                '(confidence ${dto.confidence}). '
                 'Explanation: ${dto.explanation}',
           );
         },
