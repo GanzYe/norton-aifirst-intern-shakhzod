@@ -8,6 +8,7 @@ import 'package:scam_message_detector/features/scam_detector/data/repositories/u
 import 'package:scam_message_detector/features/scam_detector/data/repositories/virus_total_repository_impl.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/connectivity_service.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/llama_native_probe.dart';
+import 'package:scam_message_detector/features/scam_detector/data/services/local_llama_inference.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/local_pii_redaction_service.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/local_scam_analysis_service.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/abuse_ipdb_repository.dart';
@@ -59,11 +60,16 @@ LlamaNativeProbe llamaNativeProbe(LlamaNativeProbeRef ref) {
 }
 
 @Riverpod(keepAlive: true)
+LocalLlamaInference localLlamaInference(LocalLlamaInferenceRef ref) {
+  return LocalLlamaInference(FlutterLlama.instance);
+}
+
+@Riverpod(keepAlive: true)
 LocalScamAnalysisService localScamAnalysisService(
   LocalScamAnalysisServiceRef ref,
 ) {
   return LocalScamAnalysisService(
-    llama: FlutterLlama.instance,
+    llamaInference: ref.watch(localLlamaInferenceProvider),
     modelDownloadService: ref.watch(modelDownloadServiceProvider),
     nativeProbe: ref.watch(llamaNativeProbeProvider),
   );
@@ -72,7 +78,7 @@ LocalScamAnalysisService localScamAnalysisService(
 @Riverpod(keepAlive: true)
 PiiRedactionRepository piiRedactionRepository(PiiRedactionRepositoryRef ref) {
   return LocalPiiRedactionService(
-    llama: FlutterLlama.instance,
+    llamaInference: ref.watch(localLlamaInferenceProvider),
     modelDownloadService: ref.watch(modelDownloadServiceProvider),
     nativeProbe: ref.watch(llamaNativeProbeProvider),
   );

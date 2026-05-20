@@ -250,11 +250,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       const SizedBox(height: AppSpacing.xl),
                       IncognitoModeSwitch(enabled: !isLoading),
                       const SizedBox(height: AppSpacing.md),
-                      ExampleSamplesRow(
-                        incognito: incognito,
-                        enabled: !isLoading,
-                        onSampleTap: _onExampleTap,
-                      ),
+                      ExampleSamplesHeader(incognito: incognito),
+                    ],
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: AppSpacing.xs),
+                    ExampleSamplesChipStrip(
+                      incognito: incognito,
+                      enabled: !isLoading,
+                      onSampleTap: _onExampleTap,
+                    ),
+                  ],
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                  AppSpacing.lg,
+                  0,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
                       if (showContextNotes) ...[
                         const SizedBox(height: AppSpacing.md),
                         AnalysisNotesSection(
@@ -262,8 +286,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           isOnline: isOnline,
                         ),
                         const SizedBox(height: AppSpacing.sm),
-                      ] else
-                        const SizedBox(height: AppSpacing.md),
+                      ],
                       MessageFieldShell(
                         incognito: incognito,
                         focused: !isLoading && _inputFocused,

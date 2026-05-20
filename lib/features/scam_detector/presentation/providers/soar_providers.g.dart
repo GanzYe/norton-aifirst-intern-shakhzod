@@ -112,8 +112,26 @@ final llamaNativeProbeProvider = Provider<LlamaNativeProbe>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef LlamaNativeProbeRef = ProviderRef<LlamaNativeProbe>;
+String _$localLlamaInferenceHash() =>
+    r'c8ccf47ffc19a5db99c50d85322b7e49482aed1a';
+
+/// See also [localLlamaInference].
+@ProviderFor(localLlamaInference)
+final localLlamaInferenceProvider = Provider<LocalLlamaInference>.internal(
+  localLlamaInference,
+  name: r'localLlamaInferenceProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$localLlamaInferenceHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef LocalLlamaInferenceRef = ProviderRef<LocalLlamaInference>;
 String _$localScamAnalysisServiceHash() =>
-    r'96490c091fa03a53e758560ea00dd03647d4ceb0';
+    r'3814f26b5455b34c148b719232fdd2ba2ba1971f';
 
 /// See also [localScamAnalysisService].
 @ProviderFor(localScamAnalysisService)
@@ -132,7 +150,7 @@ final localScamAnalysisServiceProvider =
 // ignore: unused_element
 typedef LocalScamAnalysisServiceRef = ProviderRef<LocalScamAnalysisService>;
 String _$piiRedactionRepositoryHash() =>
-    r'5d30be1581e015edac1d4155dc7f0b7ea1bae70e';
+    r'cf7696fe2d183de452c504f2237a1032ae2b746f';
 
 /// See also [piiRedactionRepository].
 @ProviderFor(piiRedactionRepository)
