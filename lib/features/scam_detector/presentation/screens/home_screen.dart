@@ -1,17 +1,18 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:scam_message_detector/core/constants/app_branding.dart';
 import 'package:scam_message_detector/core/theme/app_colors.dart';
 import 'package:scam_message_detector/core/theme/app_durations.dart';
 import 'package:scam_message_detector/core/theme/app_sizes.dart';
 import 'package:scam_message_detector/core/theme/app_spacing.dart';
 import 'package:scam_message_detector/core/theme/app_text_styles.dart';
-import 'package:scam_message_detector/core/theme/app_theme.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/scam_analysis.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/providers/device_online_provider.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/providers/incognito_mode_provider.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/providers/scam_analysis_controller.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/utils/friendly_error.dart';
+import 'package:scam_message_detector/features/scam_detector/presentation/widgets/analysis_background_lifecycle.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/analysis_loading_indicator.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/analysis_notes_section.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/app_modal_dialog.dart';
@@ -213,8 +214,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         analysis != null ? _buildAnalysisResult(analysis) : null;
     final muted = AppColors.resolveTextMuted(incognito: incognito);
 
-    return Theme(
-      data: AppTheme.resolve(incognito: incognito),
+    return AnalysisBackgroundLifecycle(
       child: Scaffold(
         appBar: AppBar(
           title: const SmdLogo(size: AppSizes.logoAppBar),
@@ -230,14 +230,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        'Scam Message Detector',
+                        AppBranding.name,
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       Text(
-                        'Paste a suspicious SMS, email, or URL below. '
-                        'Our AI will assess the scam risk instantly.',
+                        'Paste a suspicious SMS, email body, or link—or '
+                        'attach an .eml file—and tap Analyze. We score scam '
+                        'risk with AI and explain what looks unsafe.',
                         textAlign: TextAlign.center,
                         style: AppTextStyles.homeSubtitle.copyWith(
                           color: muted,
@@ -264,11 +265,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         incognito: incognito,
                         focused: !isLoading && _inputFocused,
                         child: AnimatedSwitcher(
-                          duration: AppDurations.loaderFadeIn,
-                          switchInCurve: Curves.easeOut,
-                          switchOutCurve: Curves.easeIn,
-                          layoutBuilder: (current, previous) =>
-                              current ?? const SizedBox.shrink(),
+                          duration: AppDurations.loaderCrossfade,
+                          switchInCurve: Curves.easeOutCubic,
+                          switchOutCurve: Curves.easeOutCubic,
+                          layoutBuilder: (current, previous) {
+                            return Stack(
+                              alignment: Alignment.topCenter,
+                              children: [
+                                ...previous,
+                                if (current != null) current,
+                              ],
+                            );
+                          },
                           transitionBuilder: (child, animation) {
                             return FadeTransition(
                               opacity: animation,

@@ -30,12 +30,12 @@ class ExampleSamplesRow extends StatelessWidget {
         Row(
           children: [
             Text(
-              'Try an example',
+              'Sample messages',
               style: AppTextStyles.sectionLabel.copyWith(color: muted),
             ),
             const Spacer(),
             Text(
-              'Tap to fill',
+              'Tap to try one',
               style: AppTextStyles.sectionLabel.copyWith(
                 color: muted,
                 fontWeight: FontWeight.w400,

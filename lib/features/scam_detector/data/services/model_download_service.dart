@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:background_downloader/background_downloader.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -17,11 +18,12 @@ class ModelDownloadService {
   ModelDownloadService({Dio? dio}) : _dio = dio ?? _createDownloadDio();
 
   static const modelDisplayName = 'Qwen2.5-1.5B-Instruct';
+  static const backgroundTaskId = 'local_ai_model_gguf';
 
-  static const _modelUrl =
+  static const modelUrl =
       'https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/'
       'qwen2.5-1.5b-instruct-q4_k_m.gguf';
-  static const _fileName = 'qwen2.5-1.5b-instruct-q4_k_m.gguf';
+  static const fileName = 'qwen2.5-1.5b-instruct-q4_k_m.gguf';
 
   final Dio _dio;
 
@@ -37,7 +39,31 @@ class ModelDownloadService {
 
   Future<File> _modelFile() async {
     final dir = await getApplicationDocumentsDirectory();
-    return File('${dir.path}/$_fileName');
+    return File('${dir.path}/$fileName');
+  }
+
+  /// Enqueues a native background download (continues when the app is closed).
+  Future<void> downloadModelInBackground() async {
+    final task = DownloadTask(
+      taskId: backgroundTaskId,
+      url: modelUrl,
+      filename: fileName,
+      baseDirectory: BaseDirectory.applicationDocuments,
+      updates: Updates.statusAndProgress,
+      allowPause: true,
+      retries: 3,
+    );
+
+    if (await isModelDownloaded()) {
+      return;
+    }
+
+    final existing = await FileDownloader().taskForId(backgroundTaskId);
+    if (existing != null) {
+      await FileDownloader().cancelTaskWithId(backgroundTaskId);
+    }
+
+    await FileDownloader().enqueue(task);
   }
 
   Future<bool> isModelDownloaded() async {
@@ -61,7 +87,7 @@ class ModelDownloadService {
 
     try {
       await _dio.download(
-        _modelUrl,
+        modelUrl,
         tempFile.path,
         onReceiveProgress: (received, total) {
           if (total > 0) {

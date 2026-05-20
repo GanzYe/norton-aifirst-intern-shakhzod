@@ -25,7 +25,7 @@ final modelDownloadServiceProvider = Provider<ModelDownloadService>.internal(
 // ignore: unused_element
 typedef ModelDownloadServiceRef = ProviderRef<ModelDownloadService>;
 String _$incognitoModeControllerHash() =>
-    r'0e09db1ec5a7571a17a56ef59751d3fd8ca05514';
+    r'664fe105be4188a6dc669f352bcd665b9d1f540a';
 
 /// See also [IncognitoModeController].
 @ProviderFor(IncognitoModeController)

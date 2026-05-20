@@ -15,12 +15,16 @@ class AnalysisLoadingIndicator extends StatefulWidget {
   const AnalysisLoadingIndicator({
     super.key,
     required this.incognito,
+    this.animate = true,
     this.title = "We're analyzing your message",
     this.subtitle =
         'Our AI is reading what you wrote and checking it for scam signals…',
   });
 
   final bool incognito;
+
+  /// When false, animation tickers are paused (loader hidden via opacity).
+  final bool animate;
   final String title;
   final String subtitle;
 
@@ -40,8 +44,8 @@ class _AnalysisLoadingIndicatorState extends State<AnalysisLoadingIndicator>
   late final AnimationController _meshController;
   late final AnimationController _shimmerController;
   late final AnimationController _phaseController;
-  late final AnimationController _fadeController;
-  late final Animation<double> _fade;
+  int _phaseIndex = 0;
+  bool _effectsReady = false;
 
   @override
   void initState() {
@@ -49,28 +53,60 @@ class _AnalysisLoadingIndicatorState extends State<AnalysisLoadingIndicator>
     _meshController = AnimationController(
       vsync: this,
       duration: AppDurations.loaderMeshCycle,
-    )..repeat();
+    );
     _shimmerController = AnimationController(
       vsync: this,
       duration: AppDurations.loaderShimmer,
-    )..repeat();
+    );
     _phaseController = AnimationController(
       vsync: this,
       duration: AppDurations.loaderPhaseCycle,
-    )..repeat();
-    _fadeController = AnimationController(
-      vsync: this,
-      duration: AppDurations.loaderFadeIn,
-    )..forward();
-    _fade = CurvedAnimation(parent: _fadeController, curve: Curves.easeOut);
+    )..addListener(_onPhaseTick);
+    // Paint static copy on the first frame; start aurora on the next so the
+    // input→loader transition stays smooth on mid-range devices.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _effectsReady = true);
+      _setAnimating(widget.animate);
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant AnalysisLoadingIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.animate != widget.animate && _effectsReady) {
+      _setAnimating(widget.animate);
+    }
+  }
+
+  void _setAnimating(bool animating) {
+    if (animating) {
+      _meshController.repeat();
+      _shimmerController.repeat();
+      _phaseController.repeat();
+      return;
+    }
+    _meshController.stop();
+    _shimmerController.stop();
+    _phaseController.stop();
+  }
+
+  void _onPhaseTick() {
+    final index =
+        (_phaseController.value * _phases.length).floor() % _phases.length;
+    if (index != _phaseIndex) {
+      setState(() => _phaseIndex = index);
+    }
   }
 
   @override
   void dispose() {
+    _phaseController.removeListener(_onPhaseTick);
     _meshController.dispose();
     _shimmerController.dispose();
     _phaseController.dispose();
-    _fadeController.dispose();
     super.dispose();
   }
 
@@ -84,75 +120,73 @@ class _AnalysisLoadingIndicatorState extends State<AnalysisLoadingIndicator>
     return Stack(
       fit: StackFit.expand,
       children: [
-        RepaintBoundary(
-          child: AnimatedBuilder(
-            animation: _meshController,
-            builder: (context, _) => CustomPaint(
-              painter: _AuroraBlobsPainter(
-                meshT: _meshController.value,
-                incognito: widget.incognito,
+        if (_effectsReady)
+          RepaintBoundary(
+            child: AnimatedBuilder(
+              animation: _meshController,
+              builder: (context, _) => CustomPaint(
+                isComplex: true,
+                willChange: true,
+                painter: _AuroraBlobsPainter(
+                  meshT: _meshController.value,
+                  incognito: widget.incognito,
+                ),
               ),
             ),
           ),
-        ),
-        FadeTransition(
-          opacity: _fade,
-          child: Center(
-            child: Padding(
-              padding: AppSpacing.loaderContent,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: AppSizes.loaderContentMaxWidth,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      widget.title,
+        Center(
+          child: Padding(
+            padding: AppSpacing.loaderContent,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: AppSizes.loaderContentMaxWidth,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    widget.title,
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.loaderTitle.copyWith(
+                      color: textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.loaderSubtitleTop),
+                  Text(
+                    widget.subtitle,
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.loaderSubtitle.copyWith(
+                      color: textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    child: Text(
+                      _phases[_phaseIndex],
+                      key: ValueKey<int>(_phaseIndex),
                       textAlign: TextAlign.center,
-                      style: AppTextStyles.loaderTitle.copyWith(
-                        color: textPrimary,
-                      ),
+                      style: AppTextStyles.loaderPhase,
                     ),
-                    const SizedBox(height: AppSpacing.loaderSubtitleTop),
-                    Text(
-                      widget.subtitle,
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.loaderSubtitle.copyWith(
-                        color: textMuted,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    AnimatedBuilder(
-                      animation: _phaseController,
-                      builder: (context, _) {
-                        final index =
-                            (_phaseController.value * _phases.length).floor() %
-                            _phases.length;
-                        return AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 280),
-                          child: Text(
-                            _phases[index],
-                            key: ValueKey<int>(index),
-                            textAlign: TextAlign.center,
-                            style: AppTextStyles.loaderPhase,
-                          ),
-                        );
-                      },
-                    ),
+                  ),
                     const SizedBox(height: AppSpacing.lg),
-                    RepaintBoundary(
-                      child: AnimatedBuilder(
-                        animation: _shimmerController,
-                        builder: (context, _) => _MinimalProgressBar(
-                          progress: _shimmerController.value,
-                          incognito: widget.incognito,
+                    if (_effectsReady)
+                      RepaintBoundary(
+                        child: AnimatedBuilder(
+                          animation: _shimmerController,
+                          builder: (context, _) => _MinimalProgressBar(
+                            progress: _shimmerController.value,
+                            incognito: widget.incognito,
+                          ),
                         ),
+                      )
+                    else
+                      _MinimalProgressBar(
+                        progress: 0.35,
+                        incognito: widget.incognito,
                       ),
-                    ),
-                  ],
-                ),
+                ],
               ),
             ),
           ),
@@ -165,6 +199,8 @@ class _AnalysisLoadingIndicatorState extends State<AnalysisLoadingIndicator>
 /// Original drifting aurora blobs — visible in light and dark modes.
 class _AuroraBlobsPainter extends CustomPainter {
   _AuroraBlobsPainter({required this.meshT, required this.incognito});
+
+  static const _incognitoLoaderBoost = 1.15;
 
   final double meshT;
   final bool incognito;
@@ -200,9 +236,9 @@ class _AuroraBlobsPainter extends CustomPainter {
     ];
 
     final peakAlpha = incognito
-        ? AppColors.opacityLoaderMesh
+        ? AppColors.opacityLoaderMeshLight * _incognitoLoaderBoost
         : AppColors.opacityLoaderMeshLight;
-    final blend = incognito ? BlendMode.plus : BlendMode.srcOver;
+    const blend = BlendMode.srcOver;
 
     for (final blob in blobs) {
       final paint = Paint()

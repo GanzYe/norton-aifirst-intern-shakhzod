@@ -9,7 +9,7 @@ import 'package:scam_message_detector/features/scam_detector/data/services/model
 import 'package:scam_message_detector/features/scam_detector/presentation/providers/incognito_mode_provider.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/widgets/app_modal_dialog.dart';
 
-/// Compact dark-mode-style toggle for on-device / private analysis.
+/// Toggle for on-device / private analysis with a subtle privacy accent when on.
 class IncognitoModeSwitch extends ConsumerWidget {
   const IncognitoModeSwitch({super.key, this.enabled = true});
 
@@ -29,6 +29,7 @@ class IncognitoModeSwitch extends ConsumerWidget {
 
     return AnimatedContainer(
       duration: AppDurations.incognitoTransition,
+      curve: Curves.easeOutCubic,
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm,
@@ -43,10 +44,28 @@ class IncognitoModeSwitch extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Icon(
-                incognito ? Icons.dark_mode_rounded : Icons.dark_mode_outlined,
-                size: 20,
-                color: incognito ? AppColors.nortonYellow : muted,
+              AnimatedContainer(
+                duration: AppDurations.incognitoTransition,
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: incognito
+                      ? AppColors.nortonYellow.withValues(alpha: 0.22)
+                      : AppColors.surface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: incognito
+                        ? AppColors.nortonYellow.withValues(alpha: 0.55)
+                        : border,
+                  ),
+                ),
+                child: Icon(
+                  incognito
+                      ? Icons.shield_rounded
+                      : Icons.shield_outlined,
+                  size: 20,
+                  color: incognito ? AppColors.textPrimary : muted,
+                ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
@@ -61,7 +80,11 @@ class IncognitoModeSwitch extends ConsumerWidget {
                       ),
                     ),
                     Text(
-                      incognito ? 'On · private' : 'Off · cloud analysis',
+                      isDownloading
+                          ? 'Downloading the on-device model (~350 MB)…'
+                          : incognito
+                          ? 'On — messages stay on your phone'
+                          : 'Off — uses cloud AI when online',
                       style: AppTextStyles.homeSubtitle.copyWith(
                         color: muted,
                         fontSize: 11,
@@ -71,7 +94,7 @@ class IncognitoModeSwitch extends ConsumerWidget {
                 ),
               ),
               Switch(
-                value: incognito,
+                value: incognito || isDownloading,
                 onChanged: switchEnabled
                     ? (value) => _onChanged(context, ref, value)
                     : null,
@@ -83,7 +106,8 @@ class IncognitoModeSwitch extends ConsumerWidget {
             LinearProgressIndicator(
               value: downloadProgress,
               color: AppColors.nortonYellow,
-              backgroundColor: border,
+              backgroundColor: AppColors.borderMuted,
+              borderRadius: AppRadius.smAll,
             ),
           ],
         ],
@@ -120,8 +144,9 @@ class IncognitoModeSwitch extends ConsumerWidget {
         icon: Icons.download_outlined,
         message:
             'Incognito Mode uses an on-device AI model so your messages '
-            'never leave the phone. The model is about 350 MB and only '
-            'needs to be downloaded once.',
+            'never leave the phone. The model is about 350 MB and downloads '
+            'in the background—you can close the app and we\'ll notify you '
+            'when it\'s ready.',
         actions: [
           AppModalAction(
             'Cancel',
@@ -141,7 +166,7 @@ class IncognitoModeSwitch extends ConsumerWidget {
     }
 
     try {
-      await controller.downloadAndEnable();
+      await controller.downloadAndEnableInBackground();
     } on ModelDownloadException catch (e) {
       if (!context.mounted) {
         return;

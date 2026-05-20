@@ -1,6 +1,7 @@
 import 'dart:developer' as developer;
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:scam_message_detector/core/background/background_work_coordinator.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/scam_analysis.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/soar_analysis_input.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/utils/input_classifier.dart';
@@ -20,6 +21,8 @@ class ScamAnalysisController extends _$ScamAnalysisController {
     String? emlRawContent,
   }) async {
     state = const AsyncLoading();
+
+    final background = ref.read(backgroundWorkCoordinatorProvider);
 
     state = await AsyncValue.guard(() async {
       try {
@@ -49,6 +52,11 @@ class ScamAnalysisController extends _$ScamAnalysisController {
         throw AnalysisFailedException(friendlyAnalysisError(error));
       }
     });
+
+    await background.notifyAnalysisFinished(
+      analysis: state.valueOrNull,
+      error: state.hasError ? state.error : null,
+    );
   }
 
   void reset() {

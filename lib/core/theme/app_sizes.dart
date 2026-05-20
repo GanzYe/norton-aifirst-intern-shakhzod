@@ -1,6 +1,8 @@
 abstract final class AppSizes {
   static const double logoAppBar = 32;
   static const double logoDefault = 36;
+  static const double logoSplash = 120;
+  static const double splashGlowSize = 200;
   static const double analyzeButtonHeight = 52;
   static const double progressIndicator = 24;
   static const double progressStroke = 2.5;
@@ -11,8 +13,6 @@ abstract final class AppSizes {
   static const double borderMedium = 1.5;
   static const double borderThick = 2;
   static const double cardElevation = 2;
-  static const double logoTextScale = 0.26;
-  static const double logoStroke = 1.5;
   static const double riskBadgeLetterSpacing = 0.8;
   static const double splashAbbrevLetterSpacing = 2;
   static const double splashSubtitleLetterSpacing = 1.2;

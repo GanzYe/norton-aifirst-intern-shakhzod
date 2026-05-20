@@ -79,12 +79,6 @@ abstract final class AppTextStyles {
     fontStyle: FontStyle.italic,
   );
 
-  static const TextStyle logoMark = TextStyle(
-    color: AppColors.textPrimary,
-    fontWeight: FontWeight.w900,
-    height: 1,
-  );
-
   static const TextStyle inlineAnalyzeButton = TextStyle(
     fontWeight: FontWeight.bold,
     fontSize: 14,

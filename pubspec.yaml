@@ -1,5 +1,5 @@
 name: scam_message_detector
-description: Scam Message Detector — AI-powered risk assessment for suspicious messages.
+description: SMD. — AI-powered scam risk checks for suspicious messages and links.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -23,12 +23,18 @@ dependencies:
   flutter_llama: ^1.1.2
   path_provider: ^2.1.5
   connectivity_plus: ^6.1.4
+  background_downloader: ^9.5.4
+  flutter_local_notifications: ^21.0.0
+  flutter_foreground_task: ^9.2.2
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   build_runner: ^2.4.15
   envied_generator: ^1.1.1
+  flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.6
   flutter_lints: ^6.0.0
   freezed: ^3.0.0
   json_serializable: ^6.9.5
@@ -39,3 +45,23 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/smd_logo.png
+    - assets/images/2.0x/smd_logo.png
+    - assets/images/3.0x/smd_logo.png
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/images/smd_logo.png
+  adaptive_icon_background: "#F9F9F9"
+  adaptive_icon_foreground: assets/images/smd_logo.png
+  remove_alpha_ios: true
+
+flutter_native_splash:
+  color: "#F9F9F9"
+  android: true
+  ios: true
+  web: false
+  android_12:
+    color: "#F9F9F9"

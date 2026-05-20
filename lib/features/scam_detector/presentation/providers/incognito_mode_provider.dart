@@ -20,20 +20,16 @@ class IncognitoModeController extends _$IncognitoModeController {
 
   void setEnabled(bool enabled) => state = enabled;
 
-  Future<void> downloadAndEnable() async {
+  /// Starts a background download; progress and completion are handled by
+  /// [BackgroundWorkCoordinator].
+  Future<void> downloadAndEnableInBackground() async {
     ref.read(modelDownloadProgressProvider.notifier).state = 0;
-    try {
-      final service = ref.read(modelDownloadServiceProvider);
-      await service.downloadModel(
-        onProgress: (progress) {
-          ref.read(modelDownloadProgressProvider.notifier).state = progress;
-        },
-      );
+    final service = ref.read(modelDownloadServiceProvider);
+    if (await service.isModelDownloaded()) {
       ref.read(modelDownloadProgressProvider.notifier).state = null;
       state = true;
-    } on Object {
-      ref.read(modelDownloadProgressProvider.notifier).state = null;
-      rethrow;
+      return;
     }
+    await service.downloadModelInBackground();
   }
 }
