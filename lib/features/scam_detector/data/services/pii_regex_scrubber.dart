@@ -1,8 +1,12 @@
-/// Deterministic PII masking: structured patterns + leak sweeps.
+/// Deterministic PII masking — structured patterns only (no broad sweeps).
+///
+/// Only redacts high-confidence PII: emails, phones, financial IDs, secrets,
+/// and names tied to explicit linguistic cues (greetings, roles, titles).
+/// Scam narrative words (Congratulations, Norton, Claim, etc.) are preserved.
 abstract final class PiiRegexScrubber {
   static String scrub(String input) {
     var text = input;
-    for (var pass = 0; pass < 4; pass++) {
+    for (var pass = 0; pass < 3; pass++) {
       final next = _scrubPass(text);
       if (next == text) break;
       text = next;
@@ -15,23 +19,32 @@ abstract final class PiiRegexScrubber {
     if (_phone.hasMatch(text)) return true;
     if (_ssn.hasMatch(text)) return true;
     if (_card.hasMatch(text)) return true;
-    if (_greetingName.hasMatch(text)) return true;
+    for (final m in _greetingName.allMatches(text)) {
+      final name = m.group(2)!;
+      if (_looksLikePersonName(name) && !_isAllowlistedNamePhrase(name)) {
+        return true;
+      }
+    }
     for (final m in _selfIdentityName.allMatches(text)) {
-      if (!_isAllowlistedNamePhrase(m.group(2)!)) return true;
+      final name = m.group(2)!;
+      if (_looksLikePersonName(name) && !_isAllowlistedNamePhrase(name)) {
+        return true;
+      }
     }
     for (final m in _bareIsName.allMatches(text)) {
-      if (!_isAllowlistedNamePhrase(m.group(2)!)) return true;
+      final name = m.group(2)!;
+      if (_looksLikePersonName(name) && !_isAllowlistedNamePhrase(name)) {
+        return true;
+      }
     }
-    if (_roleName.hasMatch(text)) return true;
-    if (_titleName.hasMatch(text)) return true;
+    for (final m in _titleName.allMatches(text)) {
+      if (_looksLikePersonName(m.group(2)!)) return true;
+    }
+    for (final m in _roleName.allMatches(text)) {
+      if (_looksLikePersonName(m.group(3)!)) return true;
+    }
     if (_hasUnredactedSecretMatch(text)) return true;
-    for (final m in _capitalizedToken.allMatches(text)) {
-      final word = m.group(0)!;
-      if (_isAlreadyRedacted(word)) continue;
-      if (word.length < 3 || word.length > 16) continue;
-      if (_capitalizedAllowlist.contains(word.toLowerCase())) continue;
-      return true;
-    }
+    if (_hasRepeatedPersonalName(text)) return true;
     return false;
   }
 
@@ -44,35 +57,40 @@ abstract final class PiiRegexScrubber {
     text = _replaceAllMapped(text, _card, (_) => '[REDACTED_CARD]');
 
     text = _replaceAllMapped(text, _greetingName, (m) {
+      final name = m.group(2)!;
+      if (!_looksLikePersonName(name) || _isAllowlistedNamePhrase(name)) {
+        return m.group(0)!;
+      }
       return '${m.group(1)} [REDACTED_NAME]';
     });
 
-    text = _replaceAllMapped(text, _nameTypoFragment, (m) {
-      final parts = m.group(0)!.split(RegExp(r'\s+'));
-      if (parts.length < 2) return m.group(0)!;
-      if (_typoSecondWordStop.contains(parts.last.toLowerCase())) {
+    text = _replaceAllMapped(text, _selfIdentityName, (m) {
+      final name = m.group(2)!;
+      if (!_looksLikePersonName(name) || _isAllowlistedNamePhrase(name)) {
         return m.group(0)!;
       }
-      return '[REDACTED_NAME]';
-    });
-
-    text = _replaceAllMapped(text, _selfIdentityName, (m) {
-      if (_isAllowlistedNamePhrase(m.group(2)!)) return m.group(0)!;
       return '${m.group(1)} [REDACTED_NAME]';
     });
 
     text = _replaceAllMapped(text, _bareIsName, (m) {
-      if (_isAllowlistedNamePhrase(m.group(2)!)) return m.group(0)!;
+      final name = m.group(2)!;
+      if (!_looksLikePersonName(name) || _isAllowlistedNamePhrase(name)) {
+        return m.group(0)!;
+      }
       return '${m.group(1)} [REDACTED_NAME]';
     });
 
     text = _replaceAllMapped(text, _titleName, (m) {
+      final name = m.group(2)!;
+      if (!_looksLikePersonName(name)) return m.group(0)!;
       return '${m.group(1)} [REDACTED_NAME]';
     });
 
     text = _replaceAllMapped(text, _roleName, (m) {
       final prefix = m.group(1) ?? '';
       final role = m.group(2)!;
+      final name = m.group(3)!;
+      if (!_looksLikePersonName(name)) return m.group(0)!;
       return '$prefix$role [REDACTED_NAME]';
     });
 
@@ -94,9 +112,7 @@ abstract final class PiiRegexScrubber {
       return '[REDACTED_SECRET]';
     });
 
-    text = _sweepRepeatedNames(text);
-    text = _sweepUnknownCapitalizedNames(text);
-    return _stripOrphanTypoTails(text);
+    return _redactRepeatedPersonalNames(text);
   }
 
   static bool _hasUnredactedSecretMatch(String text) {
@@ -113,55 +129,66 @@ abstract final class PiiRegexScrubber {
     return false;
   }
 
-  /// Removes stray initials left after scrubbing (e.g. redacted name + " l.").
-  static String _stripOrphanTypoTails(String text) {
-    return text.replaceAll(
-      RegExp(r'\[REDACTED_NAME\]\s+[a-z]{1,2}\b'),
-      '[REDACTED_NAME]',
-    );
+  /// Redacts a proper name only when it appears 2+ times (likely a person).
+  static String _redactRepeatedPersonalNames(String text) {
+    final counts = <String, int>{};
+    for (final m in _properNameToken.allMatches(text)) {
+      final word = m.group(0)!;
+      if (!_isLikelyPersonalNameToken(word)) continue;
+      counts[word] = (counts[word] ?? 0) + 1;
+    }
+
+    var out = text;
+    for (final entry in counts.entries) {
+      if (entry.value < 2) continue;
+      out = out.replaceAll(
+        RegExp('\\b${RegExp.escape(entry.key)}\\b'),
+        '[REDACTED_NAME]',
+      );
+    }
+    return out;
+  }
+
+  static bool _hasRepeatedPersonalName(String text) {
+    final counts = <String, int>{};
+    for (final m in _properNameToken.allMatches(text)) {
+      final word = m.group(0)!;
+      if (!_isLikelyPersonalNameToken(word)) continue;
+      counts[word] = (counts[word] ?? 0) + 1;
+      if (counts[word]! >= 2) return true;
+    }
+    return false;
+  }
+
+  static bool _isLikelyPersonalNameToken(String word) {
+    if (_isAlreadyRedacted(word)) return false;
+    if (word.length < 3 || word.length > 24) return false;
+    if (_commonWordAllowlist.contains(word.toLowerCase())) return false;
+    return true;
   }
 
   static bool _isAllowlistedNamePhrase(String phrase) {
     return phrase
         .split(RegExp(r'\s+'))
-        .every((w) => _capitalizedAllowlist.contains(w.toLowerCase()));
+        .every((w) => _commonWordAllowlist.contains(w.toLowerCase()));
   }
 
-  /// Catches leftover person names (e.g. after a partial LLM scrub).
-  static String _sweepUnknownCapitalizedNames(String text) {
-    return text.replaceAllMapped(_capitalizedToken, (m) {
-      final word = m.group(0)!;
-      if (_isAlreadyRedacted(word)) return word;
-      if (word.length < 3 || word.length > 16) return word;
-      if (_capitalizedAllowlist.contains(word.toLowerCase())) return word;
-      return '[REDACTED_NAME]';
-    });
-  }
-
-  static bool _isLikelyLeakedName(String word) {
-    if (_isAlreadyRedacted(word)) return false;
-    if (_capitalizedAllowlist.contains(word.toLowerCase())) return false;
-    if (word.length < 3 || word.length > 16) return false;
+  /// Title Case token(s) only — avoids matching "was delivered", "is resolved".
+  static bool _looksLikePersonName(String phrase) {
+    final parts = phrase.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty) return false;
+    for (final part in parts) {
+      if (part.length < 2) return false;
+      final first = part[0];
+      if (first != first.toUpperCase() || first == first.toLowerCase()) {
+        return false;
+      }
+      if (part.length > 1) {
+        final rest = part.substring(1);
+        if (rest != rest.toLowerCase()) return false;
+      }
+    }
     return true;
-  }
-
-  static String _sweepRepeatedNames(String text) {
-    final counts = <String, int>{};
-    for (final m in _capitalizedToken.allMatches(text)) {
-      final word = m.group(0)!;
-      if (!_isLikelyLeakedName(word)) continue;
-      counts[word] = (counts[word] ?? 0) + 1;
-    }
-
-    var out = text;
-    for (final word in counts.keys) {
-      if (counts[word]! < 2) continue;
-      out = out.replaceAll(
-        RegExp('\\b${RegExp.escape(word)}\\b'),
-        '[REDACTED_NAME]',
-      );
-    }
-    return out;
   }
 
   static String _replaceAllMapped(
@@ -182,8 +209,10 @@ abstract final class PiiRegexScrubber {
     r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}',
   );
 
+  /// Requires a phone-like shape; avoids matching bare dollar amounts.
   static final _phone = RegExp(
-    r'\b(?:\+?\d{1,3}[-.\s]?)?(?:\(?\d{2,4}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}\b',
+    r'\b(?:\+?1[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)\d{3}[-.\s]?\d{4}\b|'
+    r'\b\+?\d{10,14}\b',
   );
 
   static final _ssn = RegExp(r'\b\d{3}-\d{2}-\d{4}\b');
@@ -191,23 +220,19 @@ abstract final class PiiRegexScrubber {
   static final _card = RegExp(r'\b(?:\d{4}[-\s]?){3}\d{4}\b');
 
   static final _greetingName = RegExp(
-    r'\b(hello|hi|hey|dear|greetings)\s+([A-Z][a-z]+)\b',
-    caseSensitive: false,
+    r'\b(Hello|hello|Hi|hi|Hey|hey|Dear|dear|Greetings|greetings)\s+'
+    r'([A-Z][a-z]+)\b',
   );
 
   static final _selfIdentityName = RegExp(
-    r"\b(I am|I'm|it is|it's|my name is|this is|call me)\s+"
+    r"\b(I am|i am|I'm|i'm|it is|it's|It is|my name is|this is|call me)\s+"
     r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b',
-    caseSensitive: false,
   );
 
+  /// "is Shakhzod" / "was John" — not "is Microsoft" (allowlisted).
   static final _bareIsName = RegExp(
     r'\b(is|was)\s+([A-Z][a-z]+)\b',
-    caseSensitive: false,
   );
-
-  /// Model typo: "Shakhzod l" after partial redaction.
-  static final _nameTypoFragment = RegExp(r'\b[A-Z][a-z]+\s+[a-z]{1,2}\b');
 
   static final _titleName = RegExp(
     r'\b(Mr|Mrs|Ms|Miss|Dr)\.?\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b',
@@ -241,46 +266,9 @@ abstract final class PiiRegexScrubber {
     r'\b(?=[A-Za-z0-9]{16,}\b)(?=[A-Za-z]*[0-9])(?=[0-9]*[A-Za-z])[A-Za-z0-9]+\b',
   );
 
-  static final _capitalizedToken = RegExp(r'\b[A-Z][a-z]{2,}\b');
+  static final _properNameToken = RegExp(r'\b[A-Z][a-z]+\b');
 
-  static const _typoSecondWordStop = {
-    'is',
-    'to',
-    'at',
-    'of',
-    'in',
-    'on',
-    'or',
-    'an',
-    'as',
-    'be',
-    'we',
-    'he',
-    'if',
-    'so',
-    'up',
-    'by',
-    'my',
-    'me',
-    'go',
-    'do',
-    'no',
-    'am',
-    'it',
-    'us',
-    'the',
-    'and',
-    'for',
-    'are',
-    'was',
-    'had',
-    'has',
-    'her',
-    'his',
-    'not',
-  };
-
-  static const _capitalizedAllowlist = {
+  static const _commonWordAllowlist = {
     'microsoft',
     'amazon',
     'google',
@@ -290,27 +278,20 @@ abstract final class PiiRegexScrubber {
     'paypal',
     'visa',
     'mastercard',
-    'wells',
-    'fargo',
-    'chase',
-    'citibank',
-    'bank',
+    'norton',
     'irs',
     'fbi',
-    'cia',
-    'ssa',
-    'dmv',
+    'dhl',
     'fedex',
     'ups',
     'usps',
-    'dhl',
     'hello',
     'dear',
     'hi',
     'hey',
-    'greetings',
     'thanks',
     'thank',
+    'congratulations',
     'final',
     'notice',
     'urgent',
@@ -319,11 +300,8 @@ abstract final class PiiRegexScrubber {
     'warning',
     'contact',
     'call',
-    'reach',
     'agent',
     'officer',
-    'representative',
-    'inspector',
     'support',
     'team',
     'service',
@@ -332,7 +310,6 @@ abstract final class PiiRegexScrubber {
     'account',
     'pay',
     'gift',
-    'cards',
     'card',
     'legal',
     'action',
@@ -356,18 +333,38 @@ abstract final class PiiRegexScrubber {
     'must',
     'please',
     'company',
-    'inc',
-    'llc',
-    'corp',
-    'ltd',
     'api',
     'key',
     'secret',
     'token',
     'password',
-    'pin',
-    'otp',
-    'bearer',
+    'prize',
+    'winner',
+    'lottery',
+    'loyalty',
+    'draw',
+    'claim',
+    'reply',
+    'stop',
+    'opt',
+    'out',
+    'won',
+    'you',
+    'the',
+    'and',
+    'for',
+    'are',
+    'was',
+    'not',
+    'internationalization',
+    'difficult',
+    'calling',
+    'delivery',
+    'parcel',
+    'package',
+    'scheduled',
+    'appointment',
+    'reminder',
     'monday',
     'tuesday',
     'wednesday',
@@ -387,35 +384,5 @@ abstract final class PiiRegexScrubber {
     'october',
     'november',
     'december',
-    'american',
-    'express',
-    'western',
-    'union',
-    'bitcoin',
-    'crypto',
-    'transfer',
-    'payment',
-    'invoice',
-    'order',
-    'delivery',
-    'package',
-    'parcel',
-    'refund',
-    'prize',
-    'winner',
-    'lottery',
-    'fed',
-    'treasury',
-    'department',
-    'administration',
-    'reply',
-    'before',
-    'noon',
-    'internationalization',
-    'difficult',
-    'calling',
-    'safe',
-    'suspicious',
-    'dangerous',
   };
 }

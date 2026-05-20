@@ -5,12 +5,10 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_llama/flutter_llama.dart';
 import 'package:scam_message_detector/core/logging/pipeline_log.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/llama_native_probe.dart';
+import 'package:scam_message_detector/features/scam_detector/data/services/local_llama_inference.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/model_download_service.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/pii_regex_scrubber.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/pii_redaction_repository.dart';
-
-const _imStart = '<|im_start|>';
-const _imEnd = '<|im_end|>';
 
 const _piiSystemPrompt = '''
 You are an on-device PII redaction tool. You receive ONE user message and must return that same message with every piece of private data replaced by a token. Output ONLY the redacted message — no explanations, no JSON, no markdown.
@@ -63,13 +61,6 @@ You are an on-device PII redaction tool. You receive ONE user message and must r
 6. Do not add new words or commentary.
 ''';
 
-const _fewShotUserA =
-    "Hello Shakhzod, it's a pleasure to meet you. "
-    'Your API key is AIWHHQOSOWBWHJ18HWJAJ78BWO8JWOM.';
-const _fewShotAssistantA =
-    "Hello [REDACTED_NAME], it's a pleasure to meet you. "
-    'Your API key is [REDACTED_SECRET].';
-
 const _fewShotUserB =
     r'Final Notice from IRS: Pay $4,250 via gift cards. '
     'Contact agent Smith at john.doe@irs-scam.example or +1 (202) 555-0199.';
@@ -77,30 +68,19 @@ const _fewShotAssistantB =
     r'Final Notice from IRS: Pay $4,250 via gift cards. '
     'Contact agent [REDACTED_NAME] at [REDACTED_EMAIL] or [REDACTED_PHONE].';
 
-const _fewShotUserC =
-    'Hello Shakhzod, it is Shakhzod. There is an API key '
-    'AIWHHQOSOWBWHJ18HWJAJ78BWO8JWOM.';
-const _fewShotAssistantC =
-    'Hello [REDACTED_NAME], it is [REDACTED_NAME]. '
-    'There is an API key [REDACTED_SECRET].';
-
 const _maxInputChars = 1800;
-const _maxOutputTokens = 768;
 
 /// On-device PII scrubbing via Qwen2.5-1.5B with regex as a safety net.
 class LocalPiiRedactionService implements PiiRedactionRepository {
   LocalPiiRedactionService({
-    required FlutterLlama llama,
+    required LocalLlamaInference llamaInference,
     required ModelDownloadService modelDownloadService,
     required LlamaNativeProbe nativeProbe,
-  }) : _llama = llama,
+  }) : _llama = llamaInference,
        _modelDownload = modelDownloadService,
        _nativeProbe = nativeProbe;
 
-  static const _loadTimeout = Duration(seconds: 45);
-  static const _generateTimeout = Duration(minutes: 1);
-
-  final FlutterLlama _llama;
+  final LocalLlamaInference _llama;
   final ModelDownloadService _modelDownload;
   final LlamaNativeProbe _nativeProbe;
 
@@ -122,125 +102,112 @@ class LocalPiiRedactionService implements PiiRedactionRepository {
       return _finish(regexBaseline, via: 'regex');
     }
 
-    var loaded = false;
-    try {
-      final modelPath = await _modelDownload.getModelPath();
-      await _loadModelFresh(modelPath);
-      loaded = true;
+    return LocalLlamaInference.runExclusive(() async {
+      var loaded = false;
+      try {
+        final modelPath = await _modelDownload.getModelPath();
+        await _loadModelFresh(modelPath);
+        loaded = true;
 
-      // Send the original message to the LLM (pre-scrubbing caused broken
-      // fragments like "Hello [REDACTED_NAME] is Shakhzod"). Regex runs on
-      // the model reply and again on the original if the reply still leaks.
-      final truncated = _truncateForContext(input);
-      final prompt = _buildChatMlPrompt(truncated);
-      PipelineLog.info(
-        _stage,
-        'invoking on-device LLM for PII scrub',
-        context: {'promptChars': prompt.length},
-      );
-      PipelineLog.piiModelPrompt(truncated);
-
-      final params = GenerationParams(
-        prompt: prompt,
-        temperature: 0.1,
-        topP: 0.9,
-        maxTokens: _maxOutputTokens,
-        stopSequences: const [_imEnd, '<|endoftext|>'],
-      );
-
-      final response = await _llama.generate(params).timeout(_generateTimeout);
-      final raw = response.text;
-      PipelineLog.modelResponse(source: 'PII_LLM (raw)', response: raw);
-
-      final llmBody = _stripChatMlArtifacts(raw);
-      if (!_isAcceptableLlmScrub(input, llmBody)) {
-        PipelineLog.warn(
-          _stage,
-          'LLM scrub rejected; using regex baseline',
-          context: {'inputChars': input.length, 'llmChars': llmBody.length},
+        // Send the original message to the LLM (pre-scrubbing caused broken
+        // fragments like "Hello [REDACTED_NAME] is Shakhzod"). Regex runs on
+        // the model reply and again on the original if the reply still leaks.
+        final truncated = _truncateForContext(input);
+        final prompt = _buildChatMlPrompt(truncated);
+        final maxTokens = LocalLlamaInference.outputTokenBudget(
+          inputChars: truncated.length,
+          maxTokens: 280,
         );
+        PipelineLog.info(
+          _stage,
+          'invoking on-device LLM for PII scrub',
+          context: {'promptChars': prompt.length, 'maxTokens': maxTokens},
+        );
+        PipelineLog.piiModelPrompt(truncated);
+
+        final params = GenerationParams(
+          prompt: prompt,
+          // Greedy decode — faster on CPU; regex scrubs any missed PII.
+          temperature: 0,
+          topP: 1,
+          topK: 1,
+          maxTokens: maxTokens,
+          repeatPenalty: 1,
+          stopSequences: [kChatMlImEnd, '<|endoftext|>'],
+        );
+
+        final response = await _llama.generate(params);
+        final raw = response.text;
+        PipelineLog.modelResponse(source: 'PII_LLM (raw)', response: raw);
+
+        final llmBody = _stripChatMlArtifacts(raw);
+        if (!_isAcceptableLlmScrub(input, llmBody)) {
+          PipelineLog.warn(
+            _stage,
+            'LLM scrub rejected; using regex baseline',
+            context: {'inputChars': input.length, 'llmChars': llmBody.length},
+          );
+          return _finish(regexBaseline, via: 'regex');
+        }
+
+        var merged = PiiRegexScrubber.scrub(llmBody);
+        if (_stillContainsPii(merged)) {
+          PipelineLog.warn(
+            _stage,
+            'PII still detectable after LLM+regex; scrubbing original input',
+          );
+          merged = PiiRegexScrubber.scrub(input);
+        }
+        return _finish(merged, via: 'llm+regex');
+      } on Object catch (e, stack) {
+        developer.log(
+          'Local LLM redaction failed; using regex baseline.',
+          name: 'LocalPiiRedactionService',
+          error: e,
+          stackTrace: stack,
+        );
+        PipelineLog.warn(_stage, 'LLM scrub failed; using regex', error: e);
         return _finish(regexBaseline, via: 'regex');
+      } finally {
+        if (loaded) {
+          await _llama.unloadModel();
+        }
       }
-
-      var merged = PiiRegexScrubber.scrub(llmBody);
-      if (_stillContainsPii(merged)) {
-        PipelineLog.warn(
-          _stage,
-          'PII still detectable after LLM+regex; scrubbing original input',
-        );
-        merged = PiiRegexScrubber.scrub(input);
-      }
-      return _finish(merged, via: 'llm+regex');
-    } on Object catch (e, stack) {
-      developer.log(
-        'Local LLM redaction failed; using regex baseline.',
-        name: 'LocalPiiRedactionService',
-        error: e,
-        stackTrace: stack,
-      );
-      PipelineLog.warn(_stage, 'LLM scrub failed; using regex', error: e);
-      return _finish(regexBaseline, via: 'regex');
-    } finally {
-      if (loaded) {
-        await _safeUnload();
-      }
-    }
+    });
   }
 
   Future<void> _loadModelFresh(String modelPath) async {
-    final config = LlamaConfig(
-      modelPath: modelPath,
-      contextSize: 4096,
-      batchSize: 4096,
-      useGpu: false,
+    // batchSize must cover the full tokenized prompt in one llama_batch
+    // (flutter_llama_bridge.cpp). 2048 fits system+few-shot+user for PII.
+    final loaded = await _llama.loadModel(
+      LlamaConfig(
+        modelPath: modelPath,
+        contextSize: 2048,
+        batchSize: 2048,
+        nThreads: 6,
+        useGpu: false,
+      ),
     );
-
-    final loaded = await _llama.loadModel(config).timeout(_loadTimeout);
     if (!loaded) {
       throw const PiiRedactionException('Failed to load local Llama model.');
     }
   }
 
-  Future<void> _safeUnload() async {
-    try {
-      await _llama.unloadModel();
-    } on Object catch (e, stack) {
-      developer.log(
-        'unloadModel() failed after PII scrub; ignoring',
-        name: 'LocalPiiRedactionService',
-        error: e,
-        stackTrace: stack,
-      );
-    }
-  }
-
   String _buildChatMlPrompt(String message) {
     final buffer = StringBuffer()
-      ..writeln('${_imStart}system')
+      ..writeln('${kChatMlImStart}system')
       ..writeln(_piiSystemPrompt)
-      ..writeln(_imEnd)
-      ..writeln('${_imStart}user')
-      ..writeln(_fewShotUserA)
-      ..writeln(_imEnd)
-      ..writeln('${_imStart}assistant')
-      ..writeln(_fewShotAssistantA)
-      ..writeln(_imEnd)
-      ..writeln('${_imStart}user')
+      ..writeln(kChatMlImEnd)
+      ..writeln('${kChatMlImStart}user')
       ..writeln(_fewShotUserB)
-      ..writeln(_imEnd)
-      ..writeln('${_imStart}assistant')
+      ..writeln(kChatMlImEnd)
+      ..writeln('${kChatMlImStart}assistant')
       ..writeln(_fewShotAssistantB)
-      ..writeln(_imEnd)
-      ..writeln('${_imStart}user')
-      ..writeln(_fewShotUserC)
-      ..writeln(_imEnd)
-      ..writeln('${_imStart}assistant')
-      ..writeln(_fewShotAssistantC)
-      ..writeln(_imEnd)
-      ..writeln('${_imStart}user')
+      ..writeln(kChatMlImEnd)
+      ..writeln('${kChatMlImStart}user')
       ..writeln(message)
-      ..writeln(_imEnd)
-      ..write('${_imStart}assistant\n');
+      ..writeln(kChatMlImEnd)
+      ..write('${kChatMlImStart}assistant\n');
     return buffer.toString();
   }
 
@@ -270,6 +237,12 @@ class LocalPiiRedactionService implements PiiRedactionRepository {
     final inTrim = input.trim();
     final out = output.trim();
     if (out.isEmpty) return false;
+
+    // No structured PII in source — unchanged model output is valid.
+    if (out == inTrim && !PiiRegexScrubber.containsDetectablePii(inTrim)) {
+      return true;
+    }
+
     if (_stillContainsPii(out)) return false;
     if (RegExp(r'^\[REDACTED\]\s*$').hasMatch(out)) return false;
     if (RegExp(r'^(\[REDACTED_[A-Z]+\]\s*)+$').hasMatch(out)) return false;
@@ -305,10 +278,10 @@ class LocalPiiRedactionService implements PiiRedactionRepository {
 
   String _stripChatMlArtifacts(String raw) {
     var text = raw;
-    final endIdx = text.indexOf(_imEnd);
+    final endIdx = text.indexOf(kChatMlImEnd);
     if (endIdx != -1) text = text.substring(0, endIdx);
     return text
-        .replaceAll(_imStart, '')
+        .replaceAll(kChatMlImStart, '')
         .replaceAll('<|endoftext|>', '')
         .replaceFirst(RegExp(r'^\s*assistant\s*'), '')
         .trim();

@@ -1,6 +1,7 @@
 import 'package:flutter_llama/flutter_llama.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
+import 'package:scam_message_detector/features/scam_detector/data/services/local_llama_inference.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/local_scam_analysis_service.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/risk_level.dart';
 
@@ -8,6 +9,7 @@ import '../../../../support/mocks.mocks.dart';
 
 void main() {
   late MockFlutterLlama llama;
+  late LocalLlamaInference llamaInference;
   late MockModelDownloadService modelDownload;
   late MockLlamaNativeProbe probe;
   late LocalScamAnalysisService service;
@@ -23,10 +25,11 @@ void main() {
 
   setUp(() {
     llama = MockFlutterLlama();
+    llamaInference = LocalLlamaInference(llama);
     modelDownload = MockModelDownloadService();
     probe = MockLlamaNativeProbe();
     service = LocalScamAnalysisService(
-      llama: llama,
+      llamaInference: llamaInference,
       modelDownloadService: modelDownload,
       nativeProbe: probe,
     );
@@ -47,7 +50,7 @@ void main() {
         'assistant\n',
         '{"risk_level":"SAFE","confidence":80,',
         '"explanation":"Routine notification."}',
-        '<|im_end|>',
+        kChatMlImEnd,
       ].join();
       final result = service.parseModelResponseForTest(raw);
       expect(result.riskLevel, RiskLevel.safe);

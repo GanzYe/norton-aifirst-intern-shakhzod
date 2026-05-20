@@ -1,12 +1,14 @@
 import 'package:flutter_llama/flutter_llama.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
+import 'package:scam_message_detector/features/scam_detector/data/services/local_llama_inference.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/local_pii_redaction_service.dart';
 
 import '../../../../support/mocks.mocks.dart';
 
 void main() {
   late MockFlutterLlama llama;
+  late LocalLlamaInference llamaInference;
   late MockModelDownloadService modelDownload;
   late MockLlamaNativeProbe probe;
   late LocalPiiRedactionService service;
@@ -23,10 +25,11 @@ void main() {
 
   setUp(() {
     llama = MockFlutterLlama();
+    llamaInference = LocalLlamaInference(llama);
     modelDownload = MockModelDownloadService();
     probe = MockLlamaNativeProbe();
     service = LocalPiiRedactionService(
-      llama: llama,
+      llamaInference: llamaInference,
       modelDownloadService: modelDownload,
       nativeProbe: probe,
     );
@@ -88,6 +91,16 @@ void main() {
       const input =
           'Hello Shakhzod, Your API key is AIWHHQOSOWBWHJ18HWJAJ78BWO8JWOM.';
       expect(service.isAcceptableLlmScrubForTest(input, input), isFalse);
+    });
+
+    test('accepts unchanged output when message has no detectable PII', () {
+      const fedEx =
+          'Your FedEx parcel #4829103 was delivered to your front door at '
+          '2:15 PM. Track at fedex.com or reply HELP for support.';
+      expect(
+        service.isAcceptableLlmScrubForTest(fedEx, fedEx),
+        isTrue,
+      );
     });
 
     test('accepts inline redaction that keeps scam keywords', () {
@@ -196,7 +209,7 @@ void main() {
         captured.prompt,
         contains('Final Notice from IRS: Contact agent Smith about taxes'),
       );
-      expect(captured.stopSequences, contains('<|im_end|>'));
+      expect(captured.stopSequences, contains(kChatMlImEnd));
       verify(llama.unloadModel()).called(1);
     });
   });
@@ -204,7 +217,10 @@ void main() {
   group('LocalPiiRedactionService.stripChatMlArtifactsForTest', () {
     test('removes ChatML markers', () {
       expect(
-        service.stripChatMlArtifactsForTest('assistant\nHello world<|im_end|>'),
+        service.stripChatMlArtifactsForTest(
+          'assistant\nHello'
+          ' world$kChatMlImEnd',
+        ),
         'Hello world',
       );
     });

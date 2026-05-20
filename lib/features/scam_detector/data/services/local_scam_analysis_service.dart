@@ -7,15 +7,13 @@ import 'package:flutter_llama/flutter_llama.dart';
 import 'package:scam_message_detector/core/logging/pipeline_log.dart';
 import 'package:scam_message_detector/features/scam_detector/data/dtos/scam_analysis_dto.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/llama_native_probe.dart';
+import 'package:scam_message_detector/features/scam_detector/data/services/local_llama_inference.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/model_download_service.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/risk_level.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/scam_analysis.dart';
 
 // Qwen2.5-Instruct expects the ChatML template. Skipping it makes smaller
 // models ignore "respond with JSON" instructions and emit free-form prose.
-const _imStart = '<|im_start|>';
-const _imEnd = '<|im_end|>';
-
 const _systemPrompt = '''
 You are a cybersecurity classifier. Given one message, decide if it is SAFE, SUSPICIOUS, or DANGEROUS, and reply with ONE JSON object only, no prose, no markdown fences.
 
@@ -57,18 +55,17 @@ class LocalScamAnalysisException implements Exception {
 /// expected `.so` files.
 class LocalScamAnalysisService {
   LocalScamAnalysisService({
-    required FlutterLlama llama,
+    required LocalLlamaInference llamaInference,
     required ModelDownloadService modelDownloadService,
     required LlamaNativeProbe nativeProbe,
-  }) : _llama = llama,
+  }) : _llama = llamaInference,
        _modelDownload = modelDownloadService,
        _nativeProbe = nativeProbe;
 
   static const _stage = 'LLAMA_LOCAL';
-  static const _loadTimeout = Duration(seconds: 45);
   static const _generateTimeout = Duration(minutes: 2);
 
-  final FlutterLlama _llama;
+  final LocalLlamaInference _llama;
   final ModelDownloadService _modelDownload;
   final LlamaNativeProbe _nativeProbe;
 
@@ -92,90 +89,95 @@ class LocalScamAnalysisService {
       throw exc;
     }
 
-    var loaded = false;
-    try {
-      final modelPath = await _modelDownload.getModelPath();
-      await _loadModelFresh(modelPath);
-      loaded = true;
+    return LocalLlamaInference.runExclusive(() async {
+      var loaded = false;
+      try {
+        final modelPath = await _modelDownload.getModelPath();
+        await _loadModelFresh(modelPath);
+        loaded = true;
 
-      final prompt = _buildChatMlPrompt(message);
-      PipelineLog.info(
-        _stage,
-        'generating verdict',
-        context: {'promptChars': prompt.length, 'maxTokens': 220},
-      );
-
-      final params = GenerationParams(
-        prompt: prompt,
-        // Lower temperature + tight top_p keeps the small model honest on
-        // schema and prevents it from drifting into free-form prose.
-        temperature: 0.1,
-        topP: 0.8,
-        topK: 30,
-        maxTokens: 220,
-        stopSequences: const [_imEnd, '<|endoftext|>'],
-      );
-
-      // Non-streaming generate() avoids the EventChannel race in
-      // flutter_llama 1.1.2 (NO_EVENT_SINK). Timeout guards against the
-      // native worker dying silently mid-flight.
-      final response = await _llama.generate(params).timeout(_generateTimeout);
-      final raw = response.text.trim();
-      PipelineLog.modelResponse(source: 'LLAMA_LOCAL', response: raw);
-      if (raw.isEmpty) {
-        const exc = LocalScamAnalysisException(
-          'Empty response from local model.',
+        final prompt = _buildChatMlPrompt(message);
+        PipelineLog.info(
+          _stage,
+          'generating verdict',
+          context: {'promptChars': prompt.length, 'maxTokens': 220},
         );
-        PipelineLog.failure(_stage, exc);
-        throw exc;
-      }
 
-      final parsed = _parseResponse(raw).copyWith(resolvedLocally: true);
-      PipelineLog.done(
-        _stage,
-        message: 'verdict returned',
-        context: {
-          'riskLevel': parsed.riskLevel.label,
-          'confidence': parsed.confidence,
-        },
-      );
-      return parsed;
-    } on LocalScamAnalysisException {
-      rethrow;
-    } on TimeoutException catch (e, stack) {
-      developer.log(
-        'Local model inference timed out',
-        name: 'LocalScamAnalysisService',
-        error: e,
-        stackTrace: stack,
-      );
-      const exc = LocalScamAnalysisException(
-        'On-device analysis took too long. Please try again.',
-      );
-      PipelineLog.failure(_stage, exc, stackTrace: stack, message: 'timeout');
-      throw exc;
-    } on Object catch (e, stack) {
-      developer.log(
-        'Local scam analysis failed',
-        name: 'LocalScamAnalysisService',
-        error: e,
-        stackTrace: stack,
-      );
-      PipelineLog.failure(_stage, e, stackTrace: stack);
-      throw const LocalScamAnalysisException(
-        "Couldn't run on-device analysis. Please try again.",
-      );
-    } finally {
-      // ALWAYS tear the native context down at the end of a call, even on
-      // success. flutter_llama 1.1.2's `generate()` never clears the KV
-      // cache between invocations (see flutter_llama_bridge.cpp), so the
-      // *next* `generate()` — from this service or the sibling PII
-      // service — would otherwise collide with leftover KV slots and
-      // trip `ggml_abort` natively (uncatchable SIGABRT).
-      if (loaded) {
-        await _safeUnload();
+        final params = GenerationParams(
+          prompt: prompt,
+          // Lower temperature + tight top_p keeps the small model honest on
+          // schema and prevents it from drifting into free-form prose.
+          temperature: 0.1,
+          topP: 0.8,
+          topK: 30,
+          maxTokens: 220,
+          stopSequences: [kChatMlImEnd, '<|endoftext|>'],
+        );
+
+        // Non-streaming generate() avoids the EventChannel race in
+        // flutter_llama 1.1.2 (NO_EVENT_SINK). Timeout guards against the
+        // native worker dying silently mid-flight.
+        final response = await _llama.generate(
+          params,
+          timeout: _generateTimeout,
+        );
+        final raw = response.text.trim();
+        PipelineLog.modelResponse(source: 'LLAMA_LOCAL', response: raw);
+        if (raw.isEmpty) {
+          const exc = LocalScamAnalysisException(
+            'Empty response from local model.',
+          );
+          PipelineLog.failure(_stage, exc);
+          throw exc;
+        }
+
+        final parsed = _parseResponse(raw).copyWith(resolvedLocally: true);
+        PipelineLog.done(
+          _stage,
+          message: 'verdict returned',
+          context: {
+            'riskLevel': parsed.riskLevel.label,
+            'confidence': parsed.confidence,
+          },
+        );
+        return parsed;
+      } on LocalScamAnalysisException {
+        rethrow;
+      } on TimeoutException catch (e, stack) {
+        developer.log(
+          'Local model inference timed out',
+          name: 'LocalScamAnalysisService',
+          error: e,
+          stackTrace: stack,
+        );
+        const exc = LocalScamAnalysisException(
+          'On-device analysis took too long. Please try again.',
+        );
+        PipelineLog.failure(_stage, exc, stackTrace: stack, message: 'timeout');
+        throw exc;
+      } on Object catch (e, stack) {
+        developer.log(
+          'Local scam analysis failed',
+          name: 'LocalScamAnalysisService',
+          error: e,
+          stackTrace: stack,
+        );
+        PipelineLog.failure(_stage, e, stackTrace: stack);
+        throw const LocalScamAnalysisException(
+          "Couldn't run on-device analysis. Please try again.",
+        );
+      } finally {
+        // ALWAYS tear the native context down at the end of a call, even on
+        // success. flutter_llama 1.1.2's `generate()` never clears the KV
+        // cache between invocations (see flutter_llama_bridge.cpp), so the
+        // *next* `generate()` — from this service or the sibling PII
+        // service — would otherwise collide with leftover KV slots and
+        // trip `ggml_abort` natively (uncatchable SIGABRT).
+        if (loaded) {
+          await _llama.unloadModel();
+        }
       }
-    }
+    });
   }
 
   Future<void> _loadModelFresh(String modelPath) async {
@@ -197,53 +199,39 @@ class LocalScamAnalysisService {
     // n_batch, llama.cpp's `llama_context::decode` hits a GGML_ASSERT
     // and aborts the process — that's the SIGABRT we kept seeing on
     // scam prompts >256 tokens.
-    final loaded = await _llama
-        .loadModel(
-          LlamaConfig(
-            modelPath: modelPath,
-            contextSize: 4096,
-            batchSize: 4096,
-            useGpu: false,
-          ),
-        )
-        .timeout(_loadTimeout);
+    final loaded = await _llama.loadModel(
+      LlamaConfig(
+        modelPath: modelPath,
+        contextSize: 4096,
+        batchSize: 4096,
+        nThreads: 6,
+        useGpu: false,
+      ),
+    );
     if (!loaded) {
       throw const LocalScamAnalysisException('Failed to load local model.');
     }
     PipelineLog.info(_stage, 'model loaded');
   }
 
-  Future<void> _safeUnload() async {
-    try {
-      await _llama.unloadModel();
-    } on Object catch (e, stack) {
-      developer.log(
-        'unloadModel() failed after scam analysis; ignoring',
-        name: 'LocalScamAnalysisService',
-        error: e,
-        stackTrace: stack,
-      );
-    }
-  }
-
   String _buildChatMlPrompt(String message) {
     final safe = _truncateForContext(message);
     final buffer = StringBuffer()
-      ..writeln('${_imStart}system')
+      ..writeln('${kChatMlImStart}system')
       ..writeln(_systemPrompt)
-      ..writeln(_imEnd)
-      ..writeln('${_imStart}user')
+      ..writeln(kChatMlImEnd)
+      ..writeln('${kChatMlImStart}user')
       ..writeln('Analyze this message:')
       ..writeln(_fewShotUser)
-      ..writeln(_imEnd)
-      ..writeln('${_imStart}assistant')
+      ..writeln(kChatMlImEnd)
+      ..writeln('${kChatMlImStart}assistant')
       ..writeln(_fewShotAssistant)
-      ..writeln(_imEnd)
-      ..writeln('${_imStart}user')
+      ..writeln(kChatMlImEnd)
+      ..writeln('${kChatMlImStart}user')
       ..writeln('Analyze this message:')
       ..writeln(safe)
-      ..writeln(_imEnd)
-      ..write('${_imStart}assistant\n');
+      ..writeln(kChatMlImEnd)
+      ..write('${kChatMlImStart}assistant\n');
     return buffer.toString();
   }
 
@@ -290,10 +278,10 @@ class LocalScamAnalysisService {
 
   String _stripChatMlArtifacts(String raw) {
     var text = raw;
-    final endIdx = text.indexOf(_imEnd);
+    final endIdx = text.indexOf(kChatMlImEnd);
     if (endIdx != -1) text = text.substring(0, endIdx);
     return text
-        .replaceAll(_imStart, '')
+        .replaceAll(kChatMlImStart, '')
         .replaceAll('<|endoftext|>', '')
         .replaceFirst(RegExp(r'^\s*assistant\s*'), '')
         .trim();
