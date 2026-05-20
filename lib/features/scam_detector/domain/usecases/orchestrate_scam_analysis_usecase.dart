@@ -60,7 +60,21 @@ class OrchestrateScamAnalysisUseCase {
 
   static const _stage = 'ORCHESTRATOR';
 
+  ScamAnalysis _attachPipelineLog(ScamAnalysis analysis) {
+    return analysis.copyWith(pipelineLog: PipelineLog.takeCapture());
+  }
+
   Future<ScamAnalysis> call(SoarAnalysisInput input) async {
+    PipelineLog.beginCapture();
+    try {
+      return await _runPipeline(input);
+    } on Object {
+      PipelineLog.discardCapture();
+      rethrow;
+    }
+  }
+
+  Future<ScamAnalysis> _runPipeline(SoarAnalysisInput input) async {
     final trimmed = input.rawContent.trim();
     PipelineLog.start(
       _stage,
@@ -168,7 +182,7 @@ class OrchestrateScamAnalysisUseCase {
           'confidence': analysis.confidence,
         },
       );
-      return analysis;
+      return _attachPipelineLog(analysis);
     } on GeminiDataSourceException catch (cloudError, cloudStack) {
       developer.log(
         'Cloud analysis exhausted; attempting on-device fallback.',
@@ -192,7 +206,9 @@ class OrchestrateScamAnalysisUseCase {
           _stage,
           message: 'served by on-device fallback after cloud failure',
         );
-        return localResult.copyWith(cloudFallback: true);
+        return _attachPipelineLog(
+          localResult.copyWith(cloudFallback: true),
+        );
       }
       PipelineLog.failure(_stage, cloudError, stackTrace: cloudStack);
       throw const AnalyzeMessageException(
@@ -226,11 +242,13 @@ class OrchestrateScamAnalysisUseCase {
     final modelReady = await _modelDownloadService.isModelDownloaded();
     if (!modelReady) {
       PipelineLog.warn(_stage, 'offline and on-device model not downloaded');
-      return const ScamAnalysis(
-        riskLevel: RiskLevel.safe,
-        confidence: 0,
-        explanation: '',
-        localModelUnavailable: true,
+      return _attachPipelineLog(
+        const ScamAnalysis(
+          riskLevel: RiskLevel.safe,
+          confidence: 0,
+          explanation: '',
+          localModelUnavailable: true,
+        ),
       );
     }
 
@@ -250,7 +268,7 @@ class OrchestrateScamAnalysisUseCase {
           'confidence': result.confidence,
         },
       );
-      return result;
+      return _attachPipelineLog(result);
     } on LocalScamAnalysisException catch (e, stack) {
       // Offline + model is on disk but analysis still failed (parse error,
       // OOM, native crash, etc.). Surface a graceful flagged result instead
@@ -262,11 +280,13 @@ class OrchestrateScamAnalysisUseCase {
         stackTrace: stack,
       );
       PipelineLog.failure(_stage, e, stackTrace: stack);
-      return const ScamAnalysis(
-        riskLevel: RiskLevel.safe,
-        confidence: 0,
-        explanation: '',
-        localAnalysisFailed: true,
+      return _attachPipelineLog(
+        const ScamAnalysis(
+          riskLevel: RiskLevel.safe,
+          confidence: 0,
+          explanation: '',
+          localAnalysisFailed: true,
+        ),
       );
     }
   }
