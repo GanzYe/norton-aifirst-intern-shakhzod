@@ -17,9 +17,9 @@ import 'package:flutter_llama/src/models/preset_model.dart' as _i12;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i14;
 import 'package:scam_message_detector/features/scam_detector/data/datasources/gemini_remote_datasource.dart'
-    as _i20;
+    as _i21;
 import 'package:scam_message_detector/features/scam_detector/data/datasources/groq_remote_datasource.dart'
-    as _i19;
+    as _i20;
 import 'package:scam_message_detector/features/scam_detector/data/dtos/scam_analysis_dto.dart'
     as _i3;
 import 'package:scam_message_detector/features/scam_detector/data/services/connectivity_service.dart'
@@ -27,7 +27,7 @@ import 'package:scam_message_detector/features/scam_detector/data/services/conne
 import 'package:scam_message_detector/features/scam_detector/data/services/llama_native_probe.dart'
     as _i15;
 import 'package:scam_message_detector/features/scam_detector/data/services/local_scam_analysis_service.dart'
-    as _i26;
+    as _i27;
 import 'package:scam_message_detector/features/scam_detector/data/services/model_download_service.dart'
     as _i13;
 import 'package:scam_message_detector/features/scam_detector/domain/entities/scam_analysis.dart'
@@ -35,17 +35,23 @@ import 'package:scam_message_detector/features/scam_detector/domain/entities/sca
 import 'package:scam_message_detector/features/scam_detector/domain/entities/threat_intel_snapshot.dart'
     as _i5;
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/abuse_ipdb_repository.dart'
-    as _i23;
+    as _i24;
+import 'package:scam_message_detector/features/scam_detector/domain/repositories/connectivity_repository.dart'
+    as _i19;
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/eml_parse_repository.dart'
     as _i6;
+import 'package:scam_message_detector/features/scam_detector/domain/repositories/local_analysis_repository.dart'
+    as _i28;
+import 'package:scam_message_detector/features/scam_detector/domain/repositories/model_repository.dart'
+    as _i29;
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/pii_redaction_repository.dart'
-    as _i25;
+    as _i26;
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/scam_analysis_repository.dart'
-    as _i21;
-import 'package:scam_message_detector/features/scam_detector/domain/repositories/url_scan_repository.dart'
-    as _i24;
-import 'package:scam_message_detector/features/scam_detector/domain/repositories/virus_total_repository.dart'
     as _i22;
+import 'package:scam_message_detector/features/scam_detector/domain/repositories/url_scan_repository.dart'
+    as _i25;
+import 'package:scam_message_detector/features/scam_detector/domain/repositories/virus_total_repository.dart'
+    as _i23;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -371,11 +377,26 @@ class MockConnectivityService extends _i1.Mock
           as _i8.Future<bool>);
 }
 
+/// A class which mocks [ConnectivityRepository].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockConnectivityRepository extends _i1.Mock
+    implements _i19.ConnectivityRepository {
+  @override
+  _i8.Future<bool> isOnline() =>
+      (super.noSuchMethod(
+            Invocation.method(#isOnline, []),
+            returnValue: _i8.Future<bool>.value(false),
+            returnValueForMissingStub: _i8.Future<bool>.value(false),
+          )
+          as _i8.Future<bool>);
+}
+
 /// A class which mocks [GroqRemoteDataSource].
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockGroqRemoteDataSource extends _i1.Mock
-    implements _i19.GroqRemoteDataSource {
+    implements _i20.GroqRemoteDataSource {
   @override
   bool get isConfigured =>
       (super.noSuchMethod(
@@ -430,7 +451,7 @@ class MockGroqRemoteDataSource extends _i1.Mock
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockGeminiRemoteDataSource extends _i1.Mock
-    implements _i20.GeminiRemoteDataSource {
+    implements _i21.GeminiRemoteDataSource {
   @override
   _i8.Future<_i3.ScamAnalysisDto> analyzeMessage(String? message) =>
       (super.noSuchMethod(
@@ -476,7 +497,7 @@ class MockGeminiRemoteDataSource extends _i1.Mock
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockScamAnalysisRepository extends _i1.Mock
-    implements _i21.ScamAnalysisRepository {
+    implements _i22.ScamAnalysisRepository {
   @override
   _i8.Future<_i4.ScamAnalysis> analyzeMessage(String? message) =>
       (super.noSuchMethod(
@@ -520,7 +541,7 @@ class MockScamAnalysisRepository extends _i1.Mock
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockVirusTotalRepository extends _i1.Mock
-    implements _i22.VirusTotalRepository {
+    implements _i23.VirusTotalRepository {
   @override
   _i8.Future<_i5.VirusTotalResult> scanUrl(String? url) =>
       (super.noSuchMethod(
@@ -539,7 +560,7 @@ class MockVirusTotalRepository extends _i1.Mock
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockAbuseIpdbRepository extends _i1.Mock
-    implements _i23.AbuseIpdbRepository {
+    implements _i24.AbuseIpdbRepository {
   @override
   _i8.Future<_i5.AbuseIpdbResult> checkIp(String? ipAddress) =>
       (super.noSuchMethod(
@@ -563,7 +584,7 @@ class MockAbuseIpdbRepository extends _i1.Mock
 /// A class which mocks [UrlScanRepository].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockUrlScanRepository extends _i1.Mock implements _i24.UrlScanRepository {
+class MockUrlScanRepository extends _i1.Mock implements _i25.UrlScanRepository {
   @override
   _i8.Future<_i5.UrlScanResult> submitUrl(String? url) =>
       (super.noSuchMethod(
@@ -603,7 +624,7 @@ class MockEmlParseRepository extends _i1.Mock
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockPiiRedactionRepository extends _i1.Mock
-    implements _i25.PiiRedactionRepository {
+    implements _i26.PiiRedactionRepository {
   @override
   _i8.Future<String> scrubPii(String? input) =>
       (super.noSuchMethod(
@@ -628,7 +649,7 @@ class MockPiiRedactionRepository extends _i1.Mock
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockLocalScamAnalysisService extends _i1.Mock
-    implements _i26.LocalScamAnalysisService {
+    implements _i27.LocalScamAnalysisService {
   @override
   _i8.Future<bool> isUsable() =>
       (super.noSuchMethod(
@@ -665,4 +686,37 @@ class MockLocalScamAnalysisService extends _i1.Mock
             ),
           )
           as _i4.ScamAnalysis);
+}
+
+/// A class which mocks [LocalAnalysisRepository].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockLocalAnalysisRepository extends _i1.Mock
+    implements _i28.LocalAnalysisRepository {
+  @override
+  _i8.Future<_i4.ScamAnalysis> analyze(String? message) =>
+      (super.noSuchMethod(
+            Invocation.method(#analyze, [message]),
+            returnValue: _i8.Future<_i4.ScamAnalysis>.value(
+              _FakeScamAnalysis_2(this, Invocation.method(#analyze, [message])),
+            ),
+            returnValueForMissingStub: _i8.Future<_i4.ScamAnalysis>.value(
+              _FakeScamAnalysis_2(this, Invocation.method(#analyze, [message])),
+            ),
+          )
+          as _i8.Future<_i4.ScamAnalysis>);
+}
+
+/// A class which mocks [ModelRepository].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockModelRepository extends _i1.Mock implements _i29.ModelRepository {
+  @override
+  _i8.Future<bool> isModelDownloaded() =>
+      (super.noSuchMethod(
+            Invocation.method(#isModelDownloaded, []),
+            returnValue: _i8.Future<bool>.value(false),
+            returnValueForMissingStub: _i8.Future<bool>.value(false),
+          )
+          as _i8.Future<bool>);
 }

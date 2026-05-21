@@ -1,29 +1,32 @@
 import 'dart:developer' as developer;
 
 import 'package:scam_message_detector/core/logging/pipeline_log.dart';
-import 'package:scam_message_detector/features/scam_detector/data/datasources/gemini_remote_datasource.dart';
-import 'package:scam_message_detector/features/scam_detector/data/services/connectivity_service.dart';
-import 'package:scam_message_detector/features/scam_detector/data/services/local_scam_analysis_service.dart';
-import 'package:scam_message_detector/features/scam_detector/data/services/model_download_service.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/entities/analysis_outcome.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/email_auth_alignment.dart';
-import 'package:scam_message_detector/features/scam_detector/domain/entities/risk_level.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/scam_analysis.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/soar_analysis_input.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/threat_intel_snapshot.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/exceptions/analysis_failure.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/exceptions/analyze_message_exception.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/exceptions/cloud_analysis_exception.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/exceptions/local_analysis_exception.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/exceptions/pii_scrub_failure_exception.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/abuse_ipdb_repository.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/repositories/connectivity_repository.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/eml_parse_repository.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/repositories/local_analysis_repository.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/repositories/model_repository.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/pii_redaction_repository.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/scam_analysis_repository.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/url_scan_repository.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/virus_total_repository.dart';
-import 'package:scam_message_detector/features/scam_detector/domain/usecases/analyze_message_usecase.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/usecases/build_augmented_prompt_usecase.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/utils/input_classifier.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/utils/osint_target_extractor.dart';
 
 /// SOAR pipeline: Incognito → PII scrub → concurrent OSINT →
-/// augmented Gemini prompt. Falls back to local Llama when the device is
-/// offline or the cloud API is unavailable (e.g. quota/rate-limit).
+/// augmented cloud prompt. Falls back to local Llama when offline or
+/// cloud fails.
 class OrchestrateScamAnalysisUseCase {
   const OrchestrateScamAnalysisUseCase({
     required ScamAnalysisRepository scamAnalysisRepository,
@@ -33,9 +36,9 @@ class OrchestrateScamAnalysisUseCase {
     required UrlScanRepository urlScanRepository,
     required EmlParseRepository emlParseRepository,
     required BuildAugmentedPromptUseCase buildAugmentedPromptUseCase,
-    required ConnectivityService connectivityService,
-    required LocalScamAnalysisService localScamAnalysisService,
-    required ModelDownloadService modelDownloadService,
+    required ConnectivityRepository connectivityRepository,
+    required LocalAnalysisRepository localAnalysisRepository,
+    required ModelRepository modelRepository,
   }) : _scamAnalysisRepository = scamAnalysisRepository,
        _piiRedactionRepository = piiRedactionRepository,
        _virusTotalRepository = virusTotalRepository,
@@ -43,9 +46,9 @@ class OrchestrateScamAnalysisUseCase {
        _urlScanRepository = urlScanRepository,
        _emlParseRepository = emlParseRepository,
        _buildAugmentedPromptUseCase = buildAugmentedPromptUseCase,
-       _connectivityService = connectivityService,
-       _localScamAnalysisService = localScamAnalysisService,
-       _modelDownloadService = modelDownloadService;
+       _connectivityRepository = connectivityRepository,
+       _localAnalysisRepository = localAnalysisRepository,
+       _modelRepository = modelRepository;
 
   final ScamAnalysisRepository _scamAnalysisRepository;
   final PiiRedactionRepository _piiRedactionRepository;
@@ -54,17 +57,19 @@ class OrchestrateScamAnalysisUseCase {
   final UrlScanRepository _urlScanRepository;
   final EmlParseRepository _emlParseRepository;
   final BuildAugmentedPromptUseCase _buildAugmentedPromptUseCase;
-  final ConnectivityService _connectivityService;
-  final LocalScamAnalysisService _localScamAnalysisService;
-  final ModelDownloadService _modelDownloadService;
+  final ConnectivityRepository _connectivityRepository;
+  final LocalAnalysisRepository _localAnalysisRepository;
+  final ModelRepository _modelRepository;
 
   static const _stage = 'ORCHESTRATOR';
 
-  ScamAnalysis _attachPipelineLog(ScamAnalysis analysis) {
-    return analysis.copyWith(pipelineLog: PipelineLog.takeCapture());
+  AnalysisSuccess _success(ScamAnalysis analysis) {
+    return AnalysisSuccess(
+      analysis.copyWith(pipelineLog: PipelineLog.takeCapture()),
+    );
   }
 
-  Future<ScamAnalysis> call(SoarAnalysisInput input) async {
+  Future<AnalysisOutcome> call(SoarAnalysisInput input) async {
     PipelineLog.beginCapture();
     try {
       return await _runPipeline(input);
@@ -74,7 +79,7 @@ class OrchestrateScamAnalysisUseCase {
     }
   }
 
-  Future<ScamAnalysis> _runPipeline(SoarAnalysisInput input) async {
+  Future<AnalysisOutcome> _runPipeline(SoarAnalysisInput input) async {
     final trimmed = input.rawContent.trim();
     PipelineLog.start(
       _stage,
@@ -93,7 +98,7 @@ class OrchestrateScamAnalysisUseCase {
       );
     }
 
-    final isOnline = await _connectivityService.isOnline();
+    final isOnline = await _connectivityRepository.isOnline();
     if (!isOnline) {
       PipelineLog.info(_stage, 'offline; routing to on-device path');
       return _analyzeOffline(input: input, trimmed: trimmed);
@@ -125,9 +130,10 @@ class OrchestrateScamAnalysisUseCase {
       );
     }
 
-    final scrubbed = input.incognitoEnabled
-        ? await _safeScrubPii(contentForAnalysis)
-        : contentForAnalysis;
+    final scrubbed = await _safeScrubPii(
+      contentForAnalysis,
+      incognitoEnabled: input.incognitoEnabled,
+    );
 
     final skipOsint = input.incognitoEnabled && kind == SoarInputKind.plainText;
 
@@ -147,7 +153,6 @@ class OrchestrateScamAnalysisUseCase {
       );
     } else {
       intel = await _gatherThreatIntel(
-        kind: kind,
         targets: targets,
         emailAuth: emailAuth,
       );
@@ -182,8 +187,8 @@ class OrchestrateScamAnalysisUseCase {
           'confidence': analysis.confidence,
         },
       );
-      return _attachPipelineLog(analysis);
-    } on GeminiDataSourceException catch (cloudError, cloudStack) {
+      return _success(analysis);
+    } on CloudAnalysisExhaustedException catch (cloudError, cloudStack) {
       developer.log(
         'Cloud analysis exhausted; attempting on-device fallback.',
         name: 'OrchestrateScamAnalysisUseCase',
@@ -206,9 +211,7 @@ class OrchestrateScamAnalysisUseCase {
           _stage,
           message: 'served by on-device fallback after cloud failure',
         );
-        return _attachPipelineLog(
-          localResult.copyWith(cloudFallback: true),
-        );
+        return _success(localResult.copyWith(cloudFallback: true));
       }
       PipelineLog.failure(_stage, cloudError, stackTrace: cloudStack);
       throw const AnalyzeMessageException(
@@ -217,7 +220,7 @@ class OrchestrateScamAnalysisUseCase {
     }
   }
 
-  Future<ScamAnalysis> _analyzeOffline({
+  Future<AnalysisOutcome> _analyzeOffline({
     required SoarAnalysisInput input,
     required String trimmed,
   }) async {
@@ -235,21 +238,15 @@ class OrchestrateScamAnalysisUseCase {
           : emlRaw;
     }
 
-    final scrubbed = input.incognitoEnabled
-        ? await _safeScrubPii(contentForAnalysis)
-        : contentForAnalysis;
+    final scrubbed = await _safeScrubPii(
+      contentForAnalysis,
+      incognitoEnabled: input.incognitoEnabled,
+    );
 
-    final modelReady = await _modelDownloadService.isModelDownloaded();
+    final modelReady = await _modelRepository.isModelDownloaded();
     if (!modelReady) {
       PipelineLog.warn(_stage, 'offline and on-device model not downloaded');
-      return _attachPipelineLog(
-        const ScamAnalysis(
-          riskLevel: RiskLevel.safe,
-          confidence: 0,
-          explanation: '',
-          localModelUnavailable: true,
-        ),
-      );
+      return const LocalModelUnavailable();
     }
 
     PipelineLog.modelRoute(
@@ -259,7 +256,7 @@ class OrchestrateScamAnalysisUseCase {
     );
 
     try {
-      final result = await _localScamAnalysisService.analyze(scrubbed);
+      final result = await _localAnalysisRepository.analyze(scrubbed);
       PipelineLog.done(
         _stage,
         message: 'offline verdict returned',
@@ -268,31 +265,19 @@ class OrchestrateScamAnalysisUseCase {
           'confidence': result.confidence,
         },
       );
-      return _attachPipelineLog(result);
-    } on LocalScamAnalysisException catch (e, stack) {
-      // Offline + model is on disk but analysis still failed (parse error,
-      // OOM, native crash, etc.). Surface a graceful flagged result instead
-      // of leaking a raw platform exception to the UI.
+      return _success(result);
+    } on LocalAnalysisException catch (e, stack) {
       developer.log(
-        'Offline local analysis failed; returning flagged result',
+        'Offline local analysis failed; returning AnalysisError',
         name: 'OrchestrateScamAnalysisUseCase',
         error: e,
         stackTrace: stack,
       );
       PipelineLog.failure(_stage, e, stackTrace: stack);
-      return _attachPipelineLog(
-        const ScamAnalysis(
-          riskLevel: RiskLevel.safe,
-          confidence: 0,
-          explanation: '',
-          localAnalysisFailed: true,
-        ),
-      );
+      return AnalysisError(LocalAnalysisFailure(e.message));
     }
   }
 
-  /// Best-effort EML parse. Returns `null` when the input isn't a valid MIME
-  /// message so the caller can fall back to treating it as plain text.
   ParsedEmlContent? _safeParseEml(String emlRaw) {
     try {
       return _emlParseRepository.parse(emlRaw);
@@ -307,36 +292,44 @@ class OrchestrateScamAnalysisUseCase {
     }
   }
 
-  Future<String> _safeScrubPii(String content) async {
+  // FIXED: [P0] Incognito must fail closed — never send raw content to
+  // cloud on scrub error.
+  Future<String> _safeScrubPii(
+    String content, {
+    required bool incognitoEnabled,
+  }) async {
     try {
       return await _piiRedactionRepository.scrubPii(content);
     } on Object catch (e, stack) {
       developer.log(
-        'PII redaction failed; sending original content',
+        incognitoEnabled
+            ? 'PII redaction failed in Incognito; blocking analysis'
+            : 'PII redaction failed; using original content (Incognito off)',
         name: 'OrchestrateScamAnalysisUseCase',
         error: e,
         stackTrace: stack,
       );
+      if (incognitoEnabled) {
+        throw PiiScrubFailureException(
+          const PiiScrubFailure().message,
+        );
+      }
       return content;
     }
   }
 
-  /// Best-effort local analysis when the cloud path fails mid-flight.
-  /// Returns null when the model isn't ready or local analysis errors —
-  /// the caller then propagates the original cloud error.
   Future<ScamAnalysis?> _tryLocalFallback(String scrubbed) async {
-    if (!await _modelDownloadService.isModelDownloaded()) {
+    if (!await _modelRepository.isModelDownloaded()) {
       return null;
     }
     try {
-      return await _localScamAnalysisService.analyze(scrubbed);
-    } on LocalScamAnalysisException {
+      return await _localAnalysisRepository.analyze(scrubbed);
+    } on LocalAnalysisException {
       return null;
     }
   }
 
   Future<ThreatIntelSnapshot> _gatherThreatIntel({
-    required SoarInputKind kind,
     required OsintTargets targets,
     EmailAuthAlignment? emailAuth,
   }) async {
@@ -352,31 +345,28 @@ class OrchestrateScamAnalysisUseCase {
     if (url != null) {
       futures
         ..add(
-          _virusTotalRepository
-              .scanUrl(url)
-              .then((r) {
-                vtResult = r;
-              })
-              .onError((_, _) {}),
+          _virusTotalRepository.scanUrl(url).then((r) {
+            vtResult = r;
+          }).catchError((Object error, StackTrace stack) {
+            _logOsintFailure('OSINT.VT', error, stack);
+          }),
         )
         ..add(
-          _urlScanRepository
-              .submitUrl(url)
-              .then((r) {
-                urlScanResult = r;
-              })
-              .onError((_, _) {}),
+          _urlScanRepository.submitUrl(url).then((r) {
+            urlScanResult = r;
+          }).catchError((Object error, StackTrace stack) {
+            _logOsintFailure('OSINT.URLScan', error, stack);
+          }),
         );
     }
 
     if (ip != null) {
       futures.add(
-        _abuseIpdbRepository
-            .checkIp(ip)
-            .then((r) {
-              abuseResult = r;
-            })
-            .onError((_, _) {}),
+        _abuseIpdbRepository.checkIp(ip).then((r) {
+          abuseResult = r;
+        }).catchError((Object error, StackTrace stack) {
+          _logOsintFailure('OSINT.AbuseIPDB', error, stack);
+        }),
       );
     }
 
@@ -389,6 +379,21 @@ class OrchestrateScamAnalysisUseCase {
       abuseIpdb: abuseResult,
       urlScan: urlScanResult,
       emailAuth: emailAuth,
+    );
+  }
+
+  // FIXED: [P0] OSINT failures were silently swallowed; now logged at WARN.
+  void _logOsintFailure(String stage, Object error, StackTrace stack) {
+    PipelineLog.warn(
+      stage,
+      'lookup failed; continuing without this intel',
+      error: error,
+    );
+    developer.log(
+      'OSINT lookup failed',
+      name: 'OrchestrateScamAnalysisUseCase',
+      error: error,
+      stackTrace: stack,
     );
   }
 }

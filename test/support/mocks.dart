@@ -8,7 +8,10 @@ import 'package:scam_message_detector/features/scam_detector/data/services/llama
 import 'package:scam_message_detector/features/scam_detector/data/services/local_scam_analysis_service.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/model_download_service.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/abuse_ipdb_repository.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/repositories/connectivity_repository.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/eml_parse_repository.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/repositories/local_analysis_repository.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/repositories/model_repository.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/pii_redaction_repository.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/scam_analysis_repository.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/url_scan_repository.dart';
@@ -23,6 +26,7 @@ import 'package:scam_message_detector/features/scam_detector/domain/repositories
   MockSpec<LlamaNativeProbe>(),
   MockSpec<Connectivity>(),
   MockSpec<ConnectivityService>(),
+  MockSpec<ConnectivityRepository>(),
   MockSpec<GroqRemoteDataSource>(),
   MockSpec<GeminiRemoteDataSource>(),
   MockSpec<ScamAnalysisRepository>(),
@@ -32,5 +36,7 @@ import 'package:scam_message_detector/features/scam_detector/domain/repositories
   MockSpec<EmlParseRepository>(),
   MockSpec<PiiRedactionRepository>(),
   MockSpec<LocalScamAnalysisService>(),
+  MockSpec<LocalAnalysisRepository>(),
+  MockSpec<ModelRepository>(),
 ])
 void main() {}

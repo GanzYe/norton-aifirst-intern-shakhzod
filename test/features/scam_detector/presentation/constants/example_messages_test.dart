@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/entities/analysis_outcome.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/risk_level.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/scam_analysis.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/soar_analysis_input.dart';
@@ -82,7 +83,7 @@ void main() {
   group('ExampleMessages orchestrator wiring', () {
     late MockScamAnalysisRepository scamRepo;
     late MockPiiRedactionRepository pii;
-    late MockConnectivityService connectivity;
+    late MockConnectivityRepository connectivity;
     late MockVirusTotalRepository vt;
     late MockUrlScanRepository urlScan;
     late OrchestrateScamAnalysisUseCase useCase;
@@ -90,7 +91,7 @@ void main() {
     setUp(() {
       scamRepo = MockScamAnalysisRepository();
       pii = MockPiiRedactionRepository();
-      connectivity = MockConnectivityService();
+      connectivity = MockConnectivityRepository();
       vt = MockVirusTotalRepository();
       urlScan = MockUrlScanRepository();
 
@@ -121,9 +122,9 @@ void main() {
         urlScanRepository: urlScan,
         emlParseRepository: MockEmlParseRepository(),
         buildAugmentedPromptUseCase: const BuildAugmentedPromptUseCase(),
-        connectivityService: connectivity,
-        localScamAnalysisService: MockLocalScamAnalysisService(),
-        modelDownloadService: MockModelDownloadService(),
+        connectivityRepository: connectivity,
+        localAnalysisRepository: MockLocalAnalysisRepository(),
+        modelRepository: MockModelRepository(),
       );
     });
 
@@ -142,14 +143,16 @@ void main() {
             );
           });
 
-          final result = await useCase(
+          final outcome = await useCase(
             SoarAnalysisInput(
               rawContent: sample.body,
               kind: SoarInputKind.plainText,
             ),
           );
 
-          expect(result.riskLevel, sample.expectedRisk);
+          expect(outcome, isA<AnalysisSuccess>());
+          final success = outcome as AnalysisSuccess;
+          expect(success.result.riskLevel, sample.expectedRisk);
           verify(scamRepo.analyzeAugmentedPrompt(any)).called(1);
         },
       );

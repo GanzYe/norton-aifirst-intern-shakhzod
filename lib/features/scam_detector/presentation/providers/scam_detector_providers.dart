@@ -7,7 +7,6 @@ import 'package:scam_message_detector/features/scam_detector/data/datasources/ge
 import 'package:scam_message_detector/features/scam_detector/data/datasources/groq_remote_datasource.dart';
 import 'package:scam_message_detector/features/scam_detector/data/repositories/scam_analysis_repository_impl.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/scam_analysis_repository.dart';
-import 'package:scam_message_detector/features/scam_detector/domain/usecases/analyze_message_usecase.dart';
 
 part 'scam_detector_providers.g.dart';
 
@@ -48,9 +47,4 @@ ScamAnalysisRepository scamAnalysisRepository(ScamAnalysisRepositoryRef ref) {
     groqRemoteDataSource: ref.watch(groqRemoteDataSourceProvider),
     geminiRemoteDataSource: ref.watch(geminiRemoteDataSourceProvider),
   );
-}
-
-@Riverpod(keepAlive: true)
-AnalyzeMessageUseCase analyzeMessageUseCase(AnalyzeMessageUseCaseRef ref) {
-  return AnalyzeMessageUseCase(ref.watch(scamAnalysisRepositoryProvider));
 }

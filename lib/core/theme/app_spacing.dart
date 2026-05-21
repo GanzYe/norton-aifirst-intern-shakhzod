@@ -52,4 +52,38 @@ abstract final class AppSpacing {
   static const double loaderSubtitleTop = xs;
   static const double loaderDotsTop = md;
   static const double loaderDotsGap = xs;
+
+  // Incognito mode switch row.
+  static const EdgeInsets incognitoSwitchPadding = EdgeInsets.symmetric(
+    horizontal: md,
+    vertical: sm,
+  );
+
+  // Pipeline log entry tile.
+  static const EdgeInsets pipelineLogTile = EdgeInsets.symmetric(
+    horizontal: sm,
+    vertical: xs,
+  );
+
+  static const EdgeInsets pipelineLogTagChip = EdgeInsets.symmetric(
+    horizontal: 6,
+    vertical: 2,
+  );
+
+  static const EdgeInsets pipelineLogExpandTap = EdgeInsets.symmetric(
+    vertical: 2,
+  );
+
+  // Message input field action rows.
+  static const EdgeInsets inputActionRow = EdgeInsets.symmetric(
+    horizontal: xs,
+    vertical: xs,
+  );
+
+  static const EdgeInsets inputActionRowCompact = EdgeInsets.symmetric(
+    horizontal: xs,
+    vertical: 6,
+  );
+
+  static const EdgeInsets inputIconTap = EdgeInsets.all(2);
 }

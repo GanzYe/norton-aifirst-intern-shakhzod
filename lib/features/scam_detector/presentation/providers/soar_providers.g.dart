@@ -77,24 +77,25 @@ final emlParseRepositoryProvider = Provider<EmlParseRepository>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef EmlParseRepositoryRef = ProviderRef<EmlParseRepository>;
-String _$connectivityServiceHash() =>
-    r'7d8643f65cf5ec40a8aab54860bd76686712274d';
+String _$connectivityRepositoryHash() =>
+    r'6f1d24e6379fa9705c219f65c65f4376e7610a0a';
 
-/// See also [connectivityService].
-@ProviderFor(connectivityService)
-final connectivityServiceProvider = Provider<ConnectivityService>.internal(
-  connectivityService,
-  name: r'connectivityServiceProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$connectivityServiceHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+/// See also [connectivityRepository].
+@ProviderFor(connectivityRepository)
+final connectivityRepositoryProvider =
+    Provider<ConnectivityRepository>.internal(
+      connectivityRepository,
+      name: r'connectivityRepositoryProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$connectivityRepositoryHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef ConnectivityServiceRef = ProviderRef<ConnectivityService>;
+typedef ConnectivityRepositoryRef = ProviderRef<ConnectivityRepository>;
 String _$llamaNativeProbeHash() => r'767057f5f89b7ebbde5be9509d785ad37ee97146';
 
 /// See also [llamaNativeProbe].
@@ -149,6 +150,42 @@ final localScamAnalysisServiceProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef LocalScamAnalysisServiceRef = ProviderRef<LocalScamAnalysisService>;
+String _$localAnalysisRepositoryHash() =>
+    r'83cfe6f498bea520c927ddc097904f1c4873e4d5';
+
+/// See also [localAnalysisRepository].
+@ProviderFor(localAnalysisRepository)
+final localAnalysisRepositoryProvider =
+    Provider<LocalAnalysisRepository>.internal(
+      localAnalysisRepository,
+      name: r'localAnalysisRepositoryProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$localAnalysisRepositoryHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef LocalAnalysisRepositoryRef = ProviderRef<LocalAnalysisRepository>;
+String _$modelRepositoryHash() => r'2d88980795f8a9fe2d697969b881afba6fd1186c';
+
+/// See also [modelRepository].
+@ProviderFor(modelRepository)
+final modelRepositoryProvider = Provider<ModelRepository>.internal(
+  modelRepository,
+  name: r'modelRepositoryProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$modelRepositoryHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef ModelRepositoryRef = ProviderRef<ModelRepository>;
 String _$piiRedactionRepositoryHash() =>
     r'cf7696fe2d183de452c504f2237a1032ae2b746f';
 
@@ -189,7 +226,7 @@ final buildAugmentedPromptUseCaseProvider =
 typedef BuildAugmentedPromptUseCaseRef =
     ProviderRef<BuildAugmentedPromptUseCase>;
 String _$orchestrateScamAnalysisUseCaseHash() =>
-    r'1e2d41e79dc1ca7031c017407fa4265f0ba2ee87';
+    r'e26110a3ab60e0431c2acbbfde7b5171c9240c2c';
 
 /// See also [orchestrateScamAnalysisUseCase].
 @ProviderFor(orchestrateScamAnalysisUseCase)

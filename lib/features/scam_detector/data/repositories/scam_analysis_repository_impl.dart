@@ -1,7 +1,9 @@
 import 'package:scam_message_detector/core/logging/pipeline_log.dart';
 import 'package:scam_message_detector/features/scam_detector/data/datasources/gemini_remote_datasource.dart';
 import 'package:scam_message_detector/features/scam_detector/data/datasources/groq_remote_datasource.dart';
+import 'package:scam_message_detector/features/scam_detector/data/dtos/scam_analysis_dto.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/scam_analysis.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/exceptions/cloud_analysis_exception.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/scam_analysis_repository.dart';
 
 /// Cloud cascade: Groq (`llama-3.3-70b-versatile`) is tried first because
@@ -37,8 +39,8 @@ class ScamAnalysisRepositoryImpl implements ScamAnalysisRepository {
   }
 
   Future<ScamAnalysis> _runCascade({
-    required Future<dynamic> Function() groqCall,
-    required Future<dynamic> Function() geminiCall,
+    required Future<ScamAnalysisDto> Function() groqCall,
+    required Future<ScamAnalysisDto> Function() geminiCall,
   }) async {
     PipelineLog.start(_stage, context: {'groqConfigured': _groq.isConfigured});
 
@@ -47,7 +49,7 @@ class ScamAnalysisRepositoryImpl implements ScamAnalysisRepository {
         PipelineLog.info(_stage, 'trying Groq');
         final dto = await groqCall();
         PipelineLog.done(_stage, message: 'served by Groq');
-        return (dto as dynamic).toEntity() as ScamAnalysis;
+        return dto.toEntity();
       } on GroqDataSourceException catch (e) {
         PipelineLog.warn(
           _stage,
@@ -63,11 +65,13 @@ class ScamAnalysisRepositoryImpl implements ScamAnalysisRepository {
       PipelineLog.info(_stage, 'trying Gemini');
       final dto = await geminiCall();
       PipelineLog.done(_stage, message: 'served by Gemini');
-      return (dto as dynamic).toEntity() as ScamAnalysis;
-    } on GeminiDataSourceException {
-      rethrow;
+      return dto.toEntity();
+    } on GeminiDataSourceException catch (e) {
+      // FIXED: [P1] Map data-layer failure to domain exception
+      // for orchestrator.
+      throw CloudAnalysisExhaustedException(e.message);
     } catch (e) {
-      throw GeminiDataSourceException(e.toString());
+      throw CloudAnalysisExhaustedException(e.toString());
     }
   }
 }

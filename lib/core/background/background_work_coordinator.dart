@@ -7,7 +7,7 @@ import 'package:scam_message_detector/core/background/analysis_foreground_task_h
 import 'package:scam_message_detector/core/constants/app_branding.dart';
 import 'package:scam_message_detector/core/notifications/app_notifications.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/model_download_service.dart';
-import 'package:scam_message_detector/features/scam_detector/domain/entities/scam_analysis.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/entities/analysis_outcome.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/providers/incognito_mode_provider.dart';
 
 /// Initializes background download listeners and foreground-task helpers.
@@ -138,7 +138,7 @@ class BackgroundWorkCoordinator {
   }
 
   Future<void> notifyAnalysisFinished({
-    required ScamAnalysis? analysis,
+    required AnalysisOutcome? outcome,
     Object? error,
   }) async {
     await stopAnalysisForeground();
@@ -154,12 +154,11 @@ class BackgroundWorkCoordinator {
       return;
     }
 
-    if (analysis == null ||
-        analysis.localModelUnavailable ||
-        analysis.localAnalysisFailed) {
+    if (outcome == null || outcome is! AnalysisSuccess) {
       return;
     }
 
+    final analysis = outcome.result;
     await AppNotifications.showAnalysisComplete(
       riskLabel: analysis.riskLevel.label,
       confidence: analysis.confidence,

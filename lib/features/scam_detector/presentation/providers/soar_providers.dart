@@ -4,6 +4,8 @@ import 'package:scam_message_detector/core/env/env.dart';
 import 'package:scam_message_detector/features/scam_detector/data/network/osint_dio_factory.dart';
 import 'package:scam_message_detector/features/scam_detector/data/repositories/abuse_ipdb_repository_impl.dart';
 import 'package:scam_message_detector/features/scam_detector/data/repositories/eml_parse_repository_impl.dart';
+import 'package:scam_message_detector/features/scam_detector/data/repositories/local_analysis_repository_impl.dart';
+import 'package:scam_message_detector/features/scam_detector/data/repositories/model_repository_impl.dart';
 import 'package:scam_message_detector/features/scam_detector/data/repositories/url_scan_repository_impl.dart';
 import 'package:scam_message_detector/features/scam_detector/data/repositories/virus_total_repository_impl.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/connectivity_service.dart';
@@ -12,7 +14,10 @@ import 'package:scam_message_detector/features/scam_detector/data/services/local
 import 'package:scam_message_detector/features/scam_detector/data/services/local_pii_redaction_service.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/local_scam_analysis_service.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/abuse_ipdb_repository.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/repositories/connectivity_repository.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/eml_parse_repository.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/repositories/local_analysis_repository.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/repositories/model_repository.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/pii_redaction_repository.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/url_scan_repository.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/virus_total_repository.dart';
@@ -49,8 +54,9 @@ EmlParseRepository emlParseRepository(EmlParseRepositoryRef ref) {
   return EmlParseRepositoryImpl();
 }
 
+// FIXED: [P1] Expose connectivity via domain [ConnectivityRepository].
 @Riverpod(keepAlive: true)
-ConnectivityService connectivityService(ConnectivityServiceRef ref) {
+ConnectivityRepository connectivityRepository(ConnectivityRepositoryRef ref) {
   return ConnectivityService();
 }
 
@@ -73,6 +79,20 @@ LocalScamAnalysisService localScamAnalysisService(
     modelDownloadService: ref.watch(modelDownloadServiceProvider),
     nativeProbe: ref.watch(llamaNativeProbeProvider),
   );
+}
+
+@Riverpod(keepAlive: true)
+LocalAnalysisRepository localAnalysisRepository(
+  LocalAnalysisRepositoryRef ref,
+) {
+  return LocalAnalysisRepositoryImpl(
+    ref.watch(localScamAnalysisServiceProvider),
+  );
+}
+
+@Riverpod(keepAlive: true)
+ModelRepository modelRepository(ModelRepositoryRef ref) {
+  return ModelRepositoryImpl(ref.watch(modelDownloadServiceProvider));
 }
 
 @Riverpod(keepAlive: true)
@@ -103,8 +123,8 @@ OrchestrateScamAnalysisUseCase orchestrateScamAnalysisUseCase(
     urlScanRepository: ref.watch(urlScanRepositoryProvider),
     emlParseRepository: ref.watch(emlParseRepositoryProvider),
     buildAugmentedPromptUseCase: ref.watch(buildAugmentedPromptUseCaseProvider),
-    connectivityService: ref.watch(connectivityServiceProvider),
-    localScamAnalysisService: ref.watch(localScamAnalysisServiceProvider),
-    modelDownloadService: ref.watch(modelDownloadServiceProvider),
+    connectivityRepository: ref.watch(connectivityRepositoryProvider),
+    localAnalysisRepository: ref.watch(localAnalysisRepositoryProvider),
+    modelRepository: ref.watch(modelRepositoryProvider),
   );
 }

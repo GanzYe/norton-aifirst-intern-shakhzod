@@ -1,14 +1,17 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
-import 'package:scam_message_detector/features/scam_detector/data/datasources/gemini_remote_datasource.dart';
-import 'package:scam_message_detector/features/scam_detector/data/services/local_scam_analysis_service.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/entities/analysis_outcome.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/risk_level.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/scam_analysis.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/soar_analysis_input.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/threat_intel_snapshot.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/exceptions/analysis_failure.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/exceptions/analyze_message_exception.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/exceptions/cloud_analysis_exception.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/exceptions/local_analysis_exception.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/exceptions/pii_scrub_failure_exception.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/url_scan_repository.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/virus_total_repository.dart';
-import 'package:scam_message_detector/features/scam_detector/domain/usecases/analyze_message_usecase.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/usecases/build_augmented_prompt_usecase.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/usecases/orchestrate_scam_analysis_usecase.dart';
 
@@ -21,9 +24,9 @@ void main() {
   late MockAbuseIpdbRepository abuse;
   late MockUrlScanRepository urlScan;
   late MockEmlParseRepository eml;
-  late MockConnectivityService connectivity;
-  late MockLocalScamAnalysisService localLlama;
-  late MockModelDownloadService modelDownload;
+  late MockConnectivityRepository connectivity;
+  late MockLocalAnalysisRepository localLlama;
+  late MockModelRepository modelDownload;
   late OrchestrateScamAnalysisUseCase useCase;
 
   const phishingSms =
@@ -36,9 +39,9 @@ void main() {
     abuse = MockAbuseIpdbRepository();
     urlScan = MockUrlScanRepository();
     eml = MockEmlParseRepository();
-    connectivity = MockConnectivityService();
-    localLlama = MockLocalScamAnalysisService();
-    modelDownload = MockModelDownloadService();
+    connectivity = MockConnectivityRepository();
+    localLlama = MockLocalAnalysisRepository();
+    modelDownload = MockModelRepository();
 
     when(pii.scrubPii(any)).thenAnswer((inv) async {
       return inv.positionalArguments.first as String;
@@ -73,9 +76,9 @@ void main() {
       urlScanRepository: urlScan,
       emlParseRepository: eml,
       buildAugmentedPromptUseCase: const BuildAugmentedPromptUseCase(),
-      connectivityService: connectivity,
-      localScamAnalysisService: localLlama,
-      modelDownloadService: modelDownload,
+      connectivityRepository: connectivity,
+      localAnalysisRepository: localLlama,
+      modelRepository: modelDownload,
     );
   });
 
@@ -121,13 +124,15 @@ void main() {
           ),
         );
 
-        final result = await useCase(
+        final outcome = await useCase(
           const SoarAnalysisInput(
             rawContent: phishingSms,
             kind: SoarInputKind.url,
           ),
         );
 
+        expect(outcome, isA<AnalysisSuccess>());
+        final result = (outcome as AnalysisSuccess).result;
         expect(result.riskLevel, RiskLevel.dangerous);
         expect(result.confidence, 90);
         verify(vt.scanUrl(any)).called(1);
@@ -208,11 +213,30 @@ void main() {
     });
 
     test(
+      'throws PiiScrubFailureException when incognito scrub fails',
+      () async {
+        when(pii.scrubPii(any)).thenThrow(Exception('llm failed'));
+
+        expect(
+          () => useCase(
+            const SoarAnalysisInput(
+              rawContent: 'Private note with john@example.com',
+              kind: SoarInputKind.plainText,
+              incognitoEnabled: true,
+            ),
+          ),
+          throwsA(isA<PiiScrubFailureException>()),
+        );
+        verifyNever(scamRepo.analyzeAugmentedPrompt(any));
+      },
+    );
+
+    test(
       'falls back to on-device model when both cloud providers fail',
       () async {
         when(
           scamRepo.analyzeAugmentedPrompt(any),
-        ).thenThrow(const GeminiDataSourceException('cloud down'));
+        ).thenThrow(const CloudAnalysisExhaustedException('cloud down'));
         when(modelDownload.isModelDownloaded()).thenAnswer((_) async => true);
         when(localLlama.analyze(any)).thenAnswer(
           (_) async => const ScamAnalysis(
@@ -223,13 +247,15 @@ void main() {
           ),
         );
 
-        final result = await useCase(
+        final outcome = await useCase(
           const SoarAnalysisInput(
             rawContent: phishingSms,
             kind: SoarInputKind.url,
           ),
         );
 
+        expect(outcome, isA<AnalysisSuccess>());
+        final result = (outcome as AnalysisSuccess).result;
         expect(result.riskLevel, RiskLevel.suspicious);
         expect(result.cloudFallback, isTrue);
         expect(result.resolvedLocally, isTrue);
@@ -242,7 +268,7 @@ void main() {
       () async {
         when(
           scamRepo.analyzeAugmentedPrompt(any),
-        ).thenThrow(const GeminiDataSourceException('cloud down'));
+        ).thenThrow(const CloudAnalysisExhaustedException('cloud down'));
         when(modelDownload.isModelDownloaded()).thenAnswer((_) async => false);
 
         expect(
@@ -258,9 +284,6 @@ void main() {
     );
 
     test('OSINT failures are swallowed; cloud call still happens', () async {
-      // The orchestrator catches OSINT errors via `.onError(...)` on the
-      // returned future, so we must reply with `Future.error` rather than
-      // a synchronous `thenThrow`.
       when(vt.scanUrl(any)).thenAnswer(
         (_) => Future.error(
           const VirusTotalRepositoryException('VT down', statusCode: 500),
@@ -277,14 +300,14 @@ void main() {
         ),
       );
 
-      final result = await useCase(
+      final outcome = await useCase(
         const SoarAnalysisInput(
           rawContent: phishingSms,
           kind: SoarInputKind.url,
         ),
       );
 
-      expect(result.confidence, 50);
+      expect((outcome as AnalysisSuccess).result.confidence, 50);
       verify(scamRepo.analyzeAugmentedPrompt(any)).called(1);
     });
   });
@@ -307,50 +330,54 @@ void main() {
           ),
         );
 
-        final result = await useCase(
+        final outcome = await useCase(
           const SoarAnalysisInput(
             rawContent: phishingSms,
             kind: SoarInputKind.plainText,
           ),
         );
 
-        expect(result.riskLevel, RiskLevel.dangerous);
-        expect(result.resolvedLocally, isTrue);
+        expect(outcome, isA<AnalysisSuccess>());
+        expect((outcome as AnalysisSuccess).result.resolvedLocally, isTrue);
         verifyNever(scamRepo.analyzeAugmentedPrompt(any));
       },
     );
 
     test(
-      'returns localModelUnavailable when offline and no model on disk',
+      'returns LocalModelUnavailable when offline and no model on disk',
       () async {
         when(modelDownload.isModelDownloaded()).thenAnswer((_) async => false);
 
-        final result = await useCase(
+        final outcome = await useCase(
           const SoarAnalysisInput(
             rawContent: phishingSms,
             kind: SoarInputKind.plainText,
           ),
         );
 
-        expect(result.localModelUnavailable, isTrue);
+        expect(outcome, isA<LocalModelUnavailable>());
         verifyNever(localLlama.analyze(any));
       },
     );
 
-    test('returns localAnalysisFailed when offline and Llama throws', () async {
+    test('returns AnalysisError when offline and Llama throws', () async {
       when(modelDownload.isModelDownloaded()).thenAnswer((_) async => true);
       when(
         localLlama.analyze(any),
-      ).thenThrow(const LocalScamAnalysisException('parse error'));
+      ).thenThrow(const LocalAnalysisException('parse error'));
 
-      final result = await useCase(
+      final outcome = await useCase(
         const SoarAnalysisInput(
           rawContent: phishingSms,
           kind: SoarInputKind.plainText,
         ),
       );
 
-      expect(result.localAnalysisFailed, isTrue);
+      expect(outcome, isA<AnalysisError>());
+      expect(
+        (outcome as AnalysisError).failure,
+        isA<LocalAnalysisFailure>(),
+      );
     });
   });
 }

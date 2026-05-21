@@ -80,23 +80,5 @@ final scamAnalysisRepositoryProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef ScamAnalysisRepositoryRef = ProviderRef<ScamAnalysisRepository>;
-String _$analyzeMessageUseCaseHash() =>
-    r'e4642205ced2df3a6d555422dc38f2c96841be72';
-
-/// See also [analyzeMessageUseCase].
-@ProviderFor(analyzeMessageUseCase)
-final analyzeMessageUseCaseProvider = Provider<AnalyzeMessageUseCase>.internal(
-  analyzeMessageUseCase,
-  name: r'analyzeMessageUseCaseProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$analyzeMessageUseCaseHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef AnalyzeMessageUseCaseRef = ProviderRef<AnalyzeMessageUseCase>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

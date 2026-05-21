@@ -115,4 +115,38 @@ abstract final class AppTextStyles {
     fontSize: 12,
     fontWeight: FontWeight.w500,
   );
+
+  // Incognito switch secondary line.
+  static const TextStyle incognitoTitle = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w600,
+  );
+
+  static const TextStyle incognitoSubtitle = TextStyle(
+    fontSize: 11,
+    height: AppSizes.subtitleLineHeight,
+  );
+
+  // Expandable pipeline log panel.
+  static const TextStyle pipelineLogEmpty = TextStyle(fontSize: 12);
+
+  static const TextStyle pipelineLogSummary = TextStyle(
+    fontFamily: 'monospace',
+    fontSize: 11,
+    height: 1.35,
+  );
+
+  static const TextStyle pipelineLogToggle = TextStyle(fontSize: 11);
+
+  static const TextStyle pipelineLogDetail = TextStyle(
+    fontFamily: 'monospace',
+    fontSize: 10,
+    height: 1.4,
+  );
+
+  static const TextStyle pipelineLogTag = TextStyle(
+    fontSize: 10,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 0.3,
+  );
 }

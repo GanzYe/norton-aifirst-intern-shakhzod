@@ -19,9 +19,8 @@ class AnalysisPipelineLogPanel extends StatelessWidget {
     if (entries.isEmpty) {
       return Text(
         'No pipeline trace was recorded for this run.',
-        style: AppTextStyles.homeSubtitle.copyWith(
+        style: AppTextStyles.pipelineLogEmpty.copyWith(
           color: AppColors.textMuted,
-          fontSize: 12,
         ),
       );
     }
@@ -64,10 +63,7 @@ class _LogEntryTileState extends State<_LogEntryTile> {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.xs,
-        ),
+        padding: AppSpacing.pipelineLogTile,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -89,10 +85,7 @@ class _LogEntryTileState extends State<_LogEntryTile> {
             const SizedBox(height: 2),
             SelectableText(
               entry.summaryLine,
-              style: const TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 11,
-                height: 1.35,
+              style: AppTextStyles.pipelineLogSummary.copyWith(
                 color: AppColors.textMuted,
               ),
             ),
@@ -102,7 +95,7 @@ class _LogEntryTileState extends State<_LogEntryTile> {
                 onTap: () => setState(() => _detailExpanded = !_detailExpanded),
                 borderRadius: AppRadius.smAll,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  padding: AppSpacing.pipelineLogExpandTap,
                   child: Row(
                     children: [
                       Icon(
@@ -117,8 +110,7 @@ class _LogEntryTileState extends State<_LogEntryTile> {
                         _detailExpanded
                             ? 'Hide full payload'
                             : 'Show full payload',
-                        style: AppTextStyles.homeSubtitle.copyWith(
-                          fontSize: 11,
+                        style: AppTextStyles.pipelineLogToggle.copyWith(
                           color: AppColors.textMuted,
                         ),
                       ),
@@ -130,11 +122,7 @@ class _LogEntryTileState extends State<_LogEntryTile> {
                 const SizedBox(height: AppSpacing.xs),
                 SelectableText(
                   entry.detail!,
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 10,
-                    height: 1.4,
-                  ),
+                  style: AppTextStyles.pipelineLogDetail,
                 ),
               ],
             ],
@@ -146,7 +134,7 @@ class _LogEntryTileState extends State<_LogEntryTile> {
 
   Color _tagColor(String tag) {
     return switch (tag) {
-      'START' => const Color(0xFF1565C0),
+      'START' => AppColors.logTagStart,
       'DONE' => AppColors.safeGreen,
       'WARN' => AppColors.suspiciousOrange,
       'FAIL' => AppColors.dangerousRed,
@@ -170,15 +158,10 @@ class _TagChip extends StatelessWidget {
         border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        padding: AppSpacing.pipelineLogTagChip,
         child: Text(
           label,
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            color: color,
-            letterSpacing: 0.3,
-          ),
+          style: AppTextStyles.pipelineLogTag.copyWith(color: color),
         ),
       ),
     );

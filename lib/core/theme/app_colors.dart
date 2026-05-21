@@ -13,6 +13,9 @@ abstract final class AppColors {
   static const Color suspiciousOrange = Color(0xFFEF6C00);
   static const Color dangerousRed = Color(0xFFC62828);
 
+  // Pipeline log tag chips (analysis_pipeline_log_panel).
+  static const Color logTagStart = Color(0xFF1565C0);
+
   // Incognito: subtle warm privacy accent on the light theme (not dark mode).
   static const Color surfaceIncognitoAccent = Color(0xFFFFFBF3);
   static const Color surfaceElevatedIncognitoAccent = Color(0xFFFFF6DC);

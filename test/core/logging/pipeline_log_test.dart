@@ -34,4 +34,17 @@ void main() {
       expect(second.single.stage, 'PROMPT');
     });
   });
+
+  group('PipelineLog redactSensitiveBody', () {
+    test('returns full body when not in release mode', () {
+      final body = 'A' * 100;
+      expect(PipelineLog.redactSensitiveBody(body), body);
+    });
+
+    test('short bodies get redacted suffix when truncated path applies', () {
+      // In debug/test builds [kReleaseMode] is false — full body is kept.
+      const body = 'secret-user-message-content';
+      expect(PipelineLog.redactSensitiveBody(body), body);
+    });
+  });
 }

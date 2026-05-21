@@ -699,6 +699,41 @@ Design prompts worked best when I described motion direction (“grow right to l
 
 ---
 
+## Post–code review fixes (security & architecture)
+
+A follow-up senior code review identified P0 security and architecture gaps. Below is what was reported, what we changed, and how a second AI pass on the diff validated the work.
+
+### Review feedback → changes
+
+| Priority | Issue | Change made |
+| -------- | ----- | ----------- |
+| **P0** | Incognito PII scrub failure sent **raw content** to cloud | `_safeScrubPii()` now throws `PiiScrubFailureException` when `incognitoEnabled` is true; cloud path never runs on scrub failure |
+| **P0** | OSINT errors swallowed with `.onError((_, _) {})` | Replaced with `.catchError` + `PipelineLog.warn` per service (`OSINT.VT`, `OSINT.AbuseIPDB`, `OSINT.URLScan`) |
+| **P0** | Full user payloads in `PipelineLog` / expandable UI | `PipelineLog.redactSensitiveBody()` truncates to 50 chars + `… [redacted]` in **release** (`kReleaseMode`); debug keeps full body |
+| **P1** | Domain imported data layer in orchestrator | Added `ConnectivityRepository`, `LocalAnalysisRepository`, `ModelRepository` + data adapters; orchestrator depends on domain only |
+| **P1** | Sentinel `ScamAnalysis(safe, localModelUnavailable: true)` | Introduced sealed `AnalysisOutcome` (`AnalysisSuccess`, `LocalModelUnavailable`, `AnalysisError`); UI/controller pattern-match |
+| **P1** | `(dto as dynamic).toEntity()` in cloud cascade | Typed cascade as `Future<ScamAnalysisDto>` → `dto.toEntity()` |
+| **P1** | Dead `AnalyzeMessageUseCase`, unused `shared_preferences` | Removed use case + provider; dropped `shared_preferences` from `pubspec.yaml` |
+| **P2** | Hardcoded colors/sizes in log panel, Incognito switch, input field | Moved tokens to `AppColors`, `AppTextStyles`, `AppSpacing` |
+
+### Verification
+
+```bash
+flutter analyze   # 0 errors (info-only lints)
+flutter test      # 121 passed
+```
+
+### Second AI review on the fix diff
+
+After implementing the above, the same review checklist was re-run on the changed files:
+
+- **Confirmed:** Incognito fail-closed path covered by new unit test (`throws PiiScrubFailureException when incognito scrub fails`).
+- **Confirmed:** No remaining `domain/` imports of `data/` in the orchestrator.
+- **Confirmed:** `HomeScreen` uses `switch (outcome)` instead of `localModelUnavailable` / `localAnalysisFailed` flags on fake `SAFE` results.
+- **Suggested (not in scope):** Remove legacy boolean fields on `ScamAnalysis` entirely in a later cleanup PR; certificate pinning on Dio remains a production follow-up.
+
+---
+
 ## AI Code Review Summary
 
 I asked Cursor to review completed modules before merging. Below is what it suggested and what I actually changed.
@@ -742,7 +777,7 @@ flutter test
 | Widget             | `widget_test.dart`                                                     | **1 outdated test** — UI copy changed      |
 
 
-**88 tests pass**, 1 widget test fails (expects old string `"Try an example"`).
+**121 tests pass** (includes Incognito fail-closed and pipeline-log redaction tests).
 
 ### What is covered
 

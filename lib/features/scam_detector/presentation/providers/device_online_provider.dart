@@ -5,7 +5,7 @@ import 'package:scam_message_detector/features/scam_detector/presentation/provid
 /// Live online/offline state for contextual UI (e.g. offline warning notes).
 final deviceOnlineProvider = StreamProvider<bool>((ref) async* {
   final connectivity = Connectivity();
-  final service = ref.watch(connectivityServiceProvider);
+  final service = ref.watch(connectivityRepositoryProvider);
 
   yield await service.isOnline();
 

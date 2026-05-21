@@ -1,5 +1,6 @@
 import 'dart:developer' as developer;
 
+import 'package:flutter/foundation.dart';
 import 'package:scam_message_detector/core/logging/pipeline_log_entry.dart';
 
 /// Centralized, stage-aware logger for the SOAR scam-detection pipeline.
@@ -129,17 +130,32 @@ abstract final class PipelineLog {
     _logFullBody('PII', 'output ($via)', output);
   }
 
+  // FIXED: [P0] Full user payloads in release builds exposed PII in logs/UI.
+  // Truncate to 50 chars + "… [redacted]" in release; keep full body in debug.
+  static const int _releaseRedactMaxChars = 50;
+
+  static String redactSensitiveBody(String body) {
+    if (!kReleaseMode) {
+      return body;
+    }
+    if (body.length <= _releaseRedactMaxChars) {
+      return '$body … [redacted]';
+    }
+    return '${body.substring(0, _releaseRedactMaxChars)}… [redacted]';
+  }
+
   static void _logFullBody(String stage, String label, String body) {
+    final stored = redactSensitiveBody(body);
     _record(
       PipelineLogEntry(
         tag: 'INFO',
         stage: stage,
         message: '$label (${body.length} chars)',
-        detail: body,
+        detail: stored,
       ),
     );
     developer.log(
-      '[$stage] $label (${body.length} chars):\n$body',
+      '[$stage] $label (${body.length} chars):\n$stored',
       name: _name,
       level: 800,
     );

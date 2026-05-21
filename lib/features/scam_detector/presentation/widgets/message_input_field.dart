@@ -204,7 +204,7 @@ class _EmlUploadButton extends StatelessWidget {
         onTap: enabled ? onPressed : null,
         borderRadius: AppRadius.smAll,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          padding: AppSpacing.inputActionRow,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -253,7 +253,7 @@ class _EmlAttachedChip extends StatelessWidget {
           color: AppColors.resolveBorder(incognito: incognito),
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: AppSpacing.inputActionRowCompact,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -271,7 +271,7 @@ class _EmlAttachedChip extends StatelessWidget {
             onTap: enabled ? onClear : null,
             customBorder: const CircleBorder(),
             child: Padding(
-              padding: const EdgeInsets.all(2),
+              padding: AppSpacing.inputIconTap,
               child: Icon(
                 Icons.close_rounded,
                 size: AppSizes.inputInlineIcon,

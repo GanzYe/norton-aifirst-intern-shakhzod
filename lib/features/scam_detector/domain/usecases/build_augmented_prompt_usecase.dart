@@ -1,8 +1,7 @@
 import 'package:scam_message_detector/features/scam_detector/domain/entities/email_auth_alignment.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/entities/threat_intel_snapshot.dart';
 
-/// Synthesizes scrubbed user input and OSINT context into a single Gemini
-/// prompt.
+/// Synthesizes scrubbed user input and OSINT context into a single Ai prompt.
 class BuildAugmentedPromptUseCase {
   const BuildAugmentedPromptUseCase();
 

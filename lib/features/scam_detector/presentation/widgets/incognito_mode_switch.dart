@@ -30,10 +30,7 @@ class IncognitoModeSwitch extends ConsumerWidget {
     return AnimatedContainer(
       duration: AppDurations.incognitoTransition,
       curve: Curves.easeOutCubic,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
+      padding: AppSpacing.incognitoSwitchPadding,
       decoration: BoxDecoration(
         color: surface,
         borderRadius: AppRadius.mdAll,
@@ -72,9 +69,8 @@ class IncognitoModeSwitch extends ConsumerWidget {
                   children: [
                     Text(
                       'Incognito mode',
-                      style: AppTextStyles.sectionLabel.copyWith(
+                      style: AppTextStyles.incognitoTitle.copyWith(
                         color: primary,
-                        fontSize: 13,
                       ),
                     ),
                     Text(
@@ -83,9 +79,8 @@ class IncognitoModeSwitch extends ConsumerWidget {
                           : incognito
                           ? 'On — messages stay on your phone'
                           : 'Off — uses cloud AI when online',
-                      style: AppTextStyles.homeSubtitle.copyWith(
+                      style: AppTextStyles.incognitoSubtitle.copyWith(
                         color: muted,
-                        fontSize: 11,
                       ),
                     ),
                   ],

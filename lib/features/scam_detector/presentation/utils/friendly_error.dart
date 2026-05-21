@@ -1,25 +1,23 @@
-import 'package:scam_message_detector/features/scam_detector/data/datasources/gemini_remote_datasource.dart';
-import 'package:scam_message_detector/features/scam_detector/data/datasources/groq_remote_datasource.dart';
-import 'package:scam_message_detector/features/scam_detector/data/services/local_scam_analysis_service.dart';
 import 'package:scam_message_detector/features/scam_detector/data/services/model_download_service.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/entities/analysis_outcome.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/exceptions/analysis_failure.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/exceptions/analyze_message_exception.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/exceptions/cloud_analysis_exception.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/exceptions/local_analysis_exception.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/exceptions/pii_scrub_failure_exception.dart';
 import 'package:scam_message_detector/features/scam_detector/domain/repositories/pii_redaction_repository.dart';
-import 'package:scam_message_detector/features/scam_detector/domain/usecases/analyze_message_usecase.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/providers/scam_analysis_controller.dart';
 
-/// Maps any thrown analysis error to user-friendly copy. Developer details
-/// (stack traces, URLs, HTTP status codes, internal exception names) never
-/// reach the UI; everything ends up as one of a small set of curated lines.
+/// Maps any thrown analysis error to user-friendly copy.
 String friendlyAnalysisError(Object? error) {
   if (error == null) {
     return 'Analysis failed. Please try again.';
   }
 
-  // Validation errors thrown from the use case already use plain language.
   if (error is AnalyzeMessageException) {
     return error.message;
   }
 
-  // ModelDownload copy is already user-facing.
   if (error is ModelDownloadException) {
     return error.message;
   }
@@ -31,21 +29,15 @@ String friendlyAnalysisError(Object? error) {
         : 'Analysis is unavailable right now. Please try again in a moment.';
   }
 
-  if (error is GeminiDataSourceException || error is GroqDataSourceException) {
-    final raw = error.toString();
-    if (_looksRateLimited(raw)) {
-      return 'Our analysis service is busy right now. Please try again in a '
-          'minute.';
-    }
-    if (_looksLikeAuthError(raw)) {
-      return 'Cloud analysis is unavailable on this build. The app will use '
-          'the on-device model instead when possible.';
-    }
-    return 'Cloud analysis is currently unavailable. Please try again in a '
-        'moment.';
+  if (error is PiiScrubFailureException) {
+    return error.message;
   }
 
-  if (error is LocalScamAnalysisException) {
+  if (error is CloudAnalysisExhaustedException) {
+    return 'Analysis is currently unavailable. Please try again in a moment.';
+  }
+
+  if (error is LocalAnalysisException) {
     return "Couldn't run on-device analysis. Please try again, or connect "
         'to the internet for full analysis.';
   }
@@ -57,9 +49,30 @@ String friendlyAnalysisError(Object? error) {
   return 'Analysis failed. Please try again.';
 }
 
+/// User-facing copy for non-throwing [AnalysisOutcome] error states.
+String friendlyOutcomeMessage(AnalysisOutcome outcome) {
+  return switch (outcome) {
+    LocalModelUnavailable() =>
+      "No internet connection and the local model hasn't been downloaded yet. "
+      'Please connect to the internet to analyze this message, or enable '
+      'Incognito mode to download the on-device model.',
+    AnalysisError(:final failure) => switch (failure) {
+      PiiScrubFailure() => failure.message,
+      LocalAnalysisFailure() =>
+        "We couldn't complete on-device analysis for this message. "
+            'Please connect to the internet for full analysis, or try '
+            'again in a moment.',
+      CloudAnalysisFailure() =>
+        'Cloud analysis is currently unavailable. '
+            'Please try again in a moment.',
+      ConnectivityFailure() => failure.message,
+    },
+    AnalysisSuccess() => '',
+  };
+}
+
 bool _looksLikeUserMessage(String message) {
   if (message.isEmpty) return false;
-  // Reject obviously developer-y payloads.
   final lower = message.toLowerCase();
   const noise = [
     'exception',
@@ -73,21 +86,4 @@ bool _looksLikeUserMessage(String message) {
     'package:',
   ];
   return noise.every((token) => !lower.contains(token));
-}
-
-bool _looksRateLimited(String message) {
-  final lower = message.toLowerCase();
-  return lower.contains('quota') ||
-      lower.contains('rate') ||
-      lower.contains('429') ||
-      lower.contains('exceeded');
-}
-
-bool _looksLikeAuthError(String message) {
-  final lower = message.toLowerCase();
-  return lower.contains('api key') ||
-      lower.contains('apikey') ||
-      lower.contains('unauthor') ||
-      lower.contains('401') ||
-      lower.contains('403');
 }

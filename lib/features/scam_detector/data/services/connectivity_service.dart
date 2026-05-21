@@ -1,13 +1,15 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:scam_message_detector/core/logging/pipeline_log.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/repositories/connectivity_repository.dart';
 
 /// Thin wrapper around [Connectivity] for online/offline routing.
-class ConnectivityService {
+class ConnectivityService implements ConnectivityRepository {
   ConnectivityService({Connectivity? connectivity})
     : _connectivity = connectivity ?? Connectivity();
 
   final Connectivity _connectivity;
 
+  @override
   Future<bool> isOnline() async {
     PipelineLog.start('CONNECTIVITY');
     final results = await _connectivity.checkConnectivity();

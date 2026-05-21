@@ -4,6 +4,7 @@ import 'package:scam_message_detector/features/scam_detector/data/datasources/ge
 import 'package:scam_message_detector/features/scam_detector/data/datasources/groq_remote_datasource.dart';
 import 'package:scam_message_detector/features/scam_detector/data/dtos/scam_analysis_dto.dart';
 import 'package:scam_message_detector/features/scam_detector/data/repositories/scam_analysis_repository_impl.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/exceptions/cloud_analysis_exception.dart';
 
 import '../../../../support/mocks.mocks.dart';
 
@@ -85,7 +86,7 @@ void main() {
       verify(gemini.analyzeMessage(message)).called(1);
     });
 
-    test('propagates GeminiDataSourceException when both fail', () async {
+    test('throws CloudAnalysisExhaustedException when both fail', () async {
       when(groq.isConfigured).thenReturn(true);
       when(groq.analyzeMessage(message)).thenThrow(
         const GroqDataSourceException('groq down', rateLimited: true),
@@ -96,7 +97,7 @@ void main() {
 
       expect(
         () => repository.analyzeMessage(message),
-        throwsA(isA<GeminiDataSourceException>()),
+        throwsA(isA<CloudAnalysisExhaustedException>()),
       );
     });
 

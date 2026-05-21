@@ -7,7 +7,8 @@ import 'package:scam_message_detector/core/theme/app_durations.dart';
 import 'package:scam_message_detector/core/theme/app_sizes.dart';
 import 'package:scam_message_detector/core/theme/app_spacing.dart';
 import 'package:scam_message_detector/core/theme/app_text_styles.dart';
-import 'package:scam_message_detector/features/scam_detector/domain/entities/scam_analysis.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/entities/analysis_outcome.dart';
+import 'package:scam_message_detector/features/scam_detector/domain/exceptions/analysis_failure.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/providers/device_online_provider.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/providers/incognito_mode_provider.dart';
 import 'package:scam_message_detector/features/scam_detector/presentation/providers/scam_analysis_controller.dart';
@@ -39,7 +40,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   late final AnimationController _resultAnimController;
   late final Animation<double> _fadeAnimation;
   late final Animation<Offset> _slideAnimation;
-  ScamAnalysis? _lastShownAnalysis;
+  AnalysisOutcome? _lastShownOutcome;
   bool _inputFocused = false;
   double _inputSlotHeight = AppSizes.inputFieldMinHeight;
 
@@ -103,7 +104,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     });
     ref.read(scamAnalysisControllerProvider.notifier).reset();
     _resultAnimController.reset();
-    setState(() => _lastShownAnalysis = null);
+    setState(() => _lastShownOutcome = null);
   }
 
   void _clearEmlAttachment() {
@@ -116,59 +117,55 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     });
   }
 
-  Widget? _buildAnalysisResult(ScamAnalysis analysis) {
-    if (analysis.localModelUnavailable || analysis.localAnalysisFailed) {
-      return null;
-    }
-    return ResultCard(analysis: analysis);
+  // FIXED: [P1] Pattern-match [AnalysisOutcome] instead of sentinel
+  // flags on [ScamAnalysis].
+  Widget? _buildAnalysisResult(AnalysisOutcome outcome) {
+    return switch (outcome) {
+      AnalysisSuccess(:final result) => ResultCard(analysis: result),
+      _ => null,
+    };
   }
 
-  void _maybeShowAnalysisWarning(ScamAnalysis analysis) {
+  void _maybeShowOutcomeDialog(AnalysisOutcome outcome) {
     if (!mounted) return;
 
-    if (analysis.localModelUnavailable) {
-      showAppNoticeDialog(
-        context,
-        title: 'Analysis unavailable',
-        message:
-            "No internet connection and the local model hasn't been "
-            'downloaded yet. Please connect to the internet to analyze '
-            'this message, or enable Incognito mode to download the '
-            'on-device model.',
-        tone: AppModalTone.danger,
-        icon: Icons.cloud_off_outlined,
-      );
-      return;
-    }
-
-    if (analysis.localAnalysisFailed) {
-      showAppNoticeDialog(
-        context,
-        title: 'On-device analysis failed',
-        message:
-            "We couldn't complete on-device analysis for this message. "
-            'Please connect to the internet for full analysis, or try '
-            'again in a moment.',
-        tone: AppModalTone.danger,
-        icon: Icons.report_gmailerrorred_outlined,
-      );
-      return;
-    }
-
-    if (analysis.resolvedLocally) {
-      final cloudFallback = analysis.cloudFallback;
-      showAppNoticeDialog(
-        context,
-        title: 'Local analysis only',
-        tone: AppModalTone.warning,
-        message: cloudFallback
-            ? 'Cloud analysis is temporarily unavailable. This result was '
-                  'generated on-device and may be less accurate. Try again '
-                  'later for full analysis.'
-            : 'No internet connection. This result was generated '
-                  'on-device and may be less accurate. Connect to the '
-                  'internet for full analysis.',
-      );
+    switch (outcome) {
+      case LocalModelUnavailable():
+        showAppNoticeDialog(
+          context,
+          title: 'Analysis unavailable',
+          message: friendlyOutcomeMessage(outcome),
+          tone: AppModalTone.danger,
+          icon: Icons.cloud_off_outlined,
+        );
+      case AnalysisError(:final failure):
+        showAppNoticeDialog(
+          context,
+          title: switch (failure) {
+            LocalAnalysisFailure() => 'On-device analysis failed',
+            PiiScrubFailure() => 'Privacy scrub failed',
+            _ => 'Analysis failed',
+          },
+          message: friendlyOutcomeMessage(outcome),
+          tone: AppModalTone.danger,
+          icon: Icons.report_gmailerrorred_outlined,
+        );
+      case AnalysisSuccess(:final result) when result.resolvedLocally:
+        final cloudFallback = result.cloudFallback;
+        showAppNoticeDialog(
+          context,
+          title: 'Local analysis only',
+          tone: AppModalTone.warning,
+          message: cloudFallback
+              ? 'Cloud analysis is temporarily unavailable. This result was '
+                    'generated on-device and may be less accurate. Try again '
+                    'later for full analysis.'
+              : 'No internet connection. This result was generated '
+                    'on-device and may be less accurate. Connect to the '
+                    'internet for full analysis.',
+        );
+      case AnalysisSuccess():
+        break;
     }
   }
 
@@ -180,7 +177,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     });
     ref.read(scamAnalysisControllerProvider.notifier).reset();
     _resultAnimController.reset();
-    setState(() => _lastShownAnalysis = null);
+    setState(() => _lastShownOutcome = null);
   }
 
   @override
@@ -193,11 +190,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     ref.listen(scamAnalysisControllerProvider, (previous, next) {
       next.whenOrNull(
-        data: (analysis) {
-          if (analysis != null && analysis != _lastShownAnalysis) {
-            setState(() => _lastShownAnalysis = analysis);
+        data: (outcome) {
+          if (outcome != null && outcome != _lastShownOutcome) {
+            setState(() => _lastShownOutcome = outcome);
             _resultAnimController.forward(from: 0);
-            _maybeShowAnalysisWarning(analysis);
+            _maybeShowOutcomeDialog(outcome);
           }
         },
       );
@@ -211,10 +208,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       }
     });
 
-    final analysis = analysisState.valueOrNull;
-    final resultWidget = analysis != null
-        ? _buildAnalysisResult(analysis)
-        : null;
+    final outcome = analysisState.valueOrNull;
+    final resultWidget =
+        outcome != null ? _buildAnalysisResult(outcome) : null;
     final muted = AppColors.resolveTextMuted(incognito: incognito);
 
     return AnalysisBackgroundLifecycle(
