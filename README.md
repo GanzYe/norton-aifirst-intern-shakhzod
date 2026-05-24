@@ -78,7 +78,7 @@ iOS project files are included (`ios/`, minimum deployment target **14.0** for `
 ### 1. Clone and configure environment
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/GanzYe/norton-aifirst-intern-shakhzod.git
 cd norton-aifirst-intern-shakhzod
 cp .env.example .env
 ```
@@ -89,7 +89,7 @@ Edit `.env` and add your keys:
 | Variable             | Required                     | Purpose                                                |
 | -------------------- | ---------------------------- | ------------------------------------------------------ |
 | `GEMINI_API_KEY`     | **Yes** (for cloud analysis) | [Google AI Studio](https://aistudio.google.com/apikey) |
-| `GROQ_API_KEY`       | Recommended                  | Primary cloud provider (free tier)                     |
+| `GROQ_API_KEY`       | **Yes** (for cloud analysis) | Primary cloud provider (free tier)                     |
 | `VIRUSTOTAL_API_KEY` | Optional                     | URL reputation lookup                                  |
 | `ABUSEIPDB_API_KEY`  | Optional                     | IP abuse scoring                                       |
 | `URLSCAN_API_KEY`    | Optional                     | URL scan submission                                    |
@@ -241,11 +241,6 @@ flowchart TD
 
 ---
 
-## Screenshots
-
-> Replace the placeholders below with actual screenshots from a running build.
-
-
 | Screen            | Description                                 |
 | ----------------- | ------------------------------------------- |
 | Home (cloud mode) | Main input, sample messages, Analyze button |
@@ -253,34 +248,16 @@ flowchart TD
 | Incognito mode    | Warm privacy accent, download progress      |
 | Offline warning   | Dialog when no network and no local model   |
 
-
-```
-docs/screenshots/01-home-cloud.png
-docs/screenshots/02-analysis-result-dangerous.png
-docs/screenshots/03-incognito-mode.png
-docs/screenshots/04-eml-attachment.png
-docs/screenshots/05-offline-local-result.png
-```
-
-
+<img width="213" height="462" alt="Screenshot_2026_05_20_18_44_15_487_com_norton_intern_scam_message" src="https://github.com/user-attachments/assets/83a1efe7-2727-453e-a254-1f07e0b48b18" />
+<img width="213" height="462" alt="Screenshot_2026_05_20_18_46_37_248_com_norton_intern_scam_message" src="https://github.com/user-attachments/assets/bbecb034-eb36-4c48-b017-25d41081d535" />
+<img width="213" height="462" alt="Screenshot_2026_05_20_18_46_55_416_com_norton_intern_scam_message" src="https://github.com/user-attachments/assets/09dcd06f-9d51-4688-b6b0-c240fc7d0f99" />
+<img width="213" height="462" alt="Screenshot_2026_05_20_18_46_52_586_com_norton_intern_scam_message" src="https://github.com/user-attachments/assets/be1d5c42-872c-41a6-a1b4-58816c14a067" />
+<img width="213" height="462" alt="Screenshot_2026_05_20_18_46_27_839_com_norton_intern_scam_message" src="https://github.com/user-attachments/assets/ebb76f21-6976-4af6-83af-76deb578bd41" />
 
 ---
 
 ## Demo Video
-
-> Record a short walkthrough (2–3 minutes) showing: paste sample → analyze → result → toggle Incognito → offline behavior.
-
-```
-docs/demo/smd-demo.mp4
-```
-
-**Suggested demo script (use Android for steps 4–5):**
-
-1. Open app on **Android**, tap a sample message (e.g. “Fake bank alert”)
-2. Analyze and show `DANGEROUS` result with explanation
-3. Attach an `.eml` file and show email-auth context in logs
-4. Enable Incognito, show model download dialog *(Android)*
-5. Turn off Wi‑Fi, analyze again with on-device model *(Android)*
+https://drive.google.com/file/d/1ZVkfkfMgdXRvyOzcbjaMQkvVzLmaZeXE/view?usp=sharing
 
 ---
 
@@ -774,7 +751,6 @@ flutter test
 | Cloud cascade      | `scam_analysis_repository_test.dart`                                   | Groq → Gemini fallback                     |
 | PII / local AI     | `local_pii_redaction_service_test`, `local_scam_analysis_service_test` | Regex, LLM fallback, JSON/text parsers     |
 | Orchestrator       | `orchestrate_scam_analysis_usecase_test.dart`                          | Online/offline paths, Incognito OSINT skip |
-| Widget             | `widget_test.dart`                                                     | **1 outdated test** — UI copy changed      |
 
 
 **121 tests pass** (includes Incognito fail-closed and pipeline-log redaction tests).
